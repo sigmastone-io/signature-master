@@ -88,7 +88,7 @@ ScrollView {
                                 implicitWidth: pillLabel.implicitWidth + 16
                                 implicitHeight: 20
                                 radius: 10
-                                color: Theme.dark ? "#422006" : "#fef3c7"
+                                color: Theme.bannerWarningBackground
 
                                 Label {
                                     id: pillLabel
@@ -96,7 +96,7 @@ ScrollView {
                                     text: "self-signed, test only"
                                     font.pixelSize: 11
                                     font.weight: Font.DemiBold
-                                    color: Theme.dark ? "#fde68a" : "#78350f"
+                                    color: Theme.bannerWarningForeground
                                 }
                             }
                         }

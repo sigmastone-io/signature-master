@@ -14,11 +14,18 @@ Rectangle {
 
     signal actionTriggered
 
-    readonly property color foreground: kind === "auto" ? (Theme.dark ? "#fed7aa" : "#7c2d12") : kind === "error" ? (Theme.dark ? "#fecaca" : "#7f1d1d") : (Theme.dark ? "#fde68a" : "#78350f")
+    readonly property color foreground: kind === "auto" ? Theme.bannerAutoForeground : kind === "error" ? Theme.bannerErrorForeground : Theme.bannerWarningForeground
 
     Layout.fillWidth: true
     implicitHeight: row.implicitHeight + 16
-    color: kind === "auto" ? (Theme.dark ? "#431407" : "#ffedd5") : kind === "error" ? (Theme.dark ? "#450a0a" : "#fee2e2") : (Theme.dark ? "#422006" : "#fef3c7")
+    color: kind === "auto" ? Theme.bannerAutoBackground : kind === "error" ? Theme.bannerErrorBackground : Theme.bannerWarningBackground
+
+    // The wash sits on the canvas, never on another wash.
+    Rectangle {
+        anchors.fill: parent
+        z: -1
+        color: Theme.canvas
+    }
 
     RowLayout {
         id: row

@@ -10,6 +10,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QStyleHints>
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
@@ -30,7 +31,22 @@ int main(int argc, char* argv[]) {
         QStringLiteral(
             "Start in the tray without showing the window (used by Start with Windows)."));
     parser.addOption(hiddenOption);
+    const QCommandLineOption schemeOption(
+        QStringLiteral("color-scheme"),
+        QStringLiteral("Force \"light\" or \"dark\" instead of following Windows (for checking "
+                       "the theme)."),
+        QStringLiteral("scheme"));
+    parser.addOption(schemeOption);
     parser.process(app);
+
+    if (parser.isSet(schemeOption)) {
+        const QString scheme = parser.value(schemeOption).toLower();
+        if (scheme == QStringLiteral("light")) {
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+        } else if (scheme == QStringLiteral("dark")) {
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+        }
+    }
 
     QQuickStyle::setStyle(QStringLiteral("FluentWinUI3"));
 

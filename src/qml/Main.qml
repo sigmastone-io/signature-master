@@ -15,7 +15,16 @@ ApplicationWindow {
     visible: false
     title: "Signature Master"
     color: Theme.canvas
-    palette.accent: "#4f46e5"
+    palette.accent: Theme.accent
+    palette.highlight: Theme.accent
+    palette.window: Theme.canvas
+    palette.windowText: Theme.text
+    palette.base: Theme.surface
+    palette.text: Theme.text
+    palette.button: Theme.surface0
+    palette.buttonText: Theme.text
+    palette.placeholderText: Theme.subtle
+    palette.link: Theme.accent
 
     // Closing hides to the tray; Quit lives in the tray menu.
     onClosing: close => {

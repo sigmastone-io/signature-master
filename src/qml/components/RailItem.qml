@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import SignatureMaster
 
 // One entry of the left rail, with an optional count badge.
 ItemDelegate {
@@ -25,13 +26,13 @@ ItemDelegate {
         width: Math.max(18, badgeLabel.implicitWidth + 10)
         height: 18
         radius: 9
-        color: "#d97706"
+        color: Theme.pending
 
         Label {
             id: badgeLabel
             anchors.centerIn: parent
             text: control.badge > 99 ? "99+" : control.badge
-            color: "#ffffff"
+            color: Theme.dark ? Theme.crust : "#ffffff"
             font.pixelSize: 11
             font.weight: Font.DemiBold
         }
