@@ -50,6 +50,24 @@ build\dev\signature-master.exe
 `windeployqt`, so the executable runs straight from the build directory. A `CMakeUserPresets.json`
 (ignored by git) is the place for a preset that sets `VCPKG_ROOT` for your machine.
 
+## The job side
+
+Two PowerShell scripts under `scripts/` are what a release workflow calls; there is no client
+library.
+
+```powershell
+.\scripts\Test-SigningDesk.ps1 -Desk http://192.168.0.31:7443
+.\scripts\Request-Signature.ps1 -Desk http://192.168.0.31:7443 -Files target\msi\neurotrader-0.1.0-x64.msi -Thumbprint <sha1>
+```
+
+`Test-SigningDesk.ps1` fails the job at its start when the desk is off. `Request-Signature.ps1`
+opens a request from the `GITHUB_*` variables (or its parameters), uploads the files, waits for
+the desk, fetches the signed copies, checks the signer, the signature status and the timestamp,
+and only then replaces the originals in place. Any other outcome fails with the desk's reason.
+`SIGNING_DESK`, `SIGNING_THUMBPRINT` and `SIGNING_TOKEN` in the environment stand in for the
+parameters; `-AllowUntrustedSigner` is for a self-signed test certificate and never for a
+release.
+
 ## Packaging
 
 ```powershell
