@@ -21,3 +21,6 @@ vcpkg_installed/
 *.crt
 *.key
 secrets/
+
+# WiX extension cache, written beside the project by `wix extension add` without --global
+.wix/

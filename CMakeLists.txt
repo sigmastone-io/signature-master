@@ -6,6 +6,10 @@ project(SignatureMaster
     HOMEPAGE_URL "https://github.com/sigmastone-io/signature-master"
     LANGUAGES CXX)
 
+if(WIN32)
+    enable_language(RC) # the icon and version resource
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -27,6 +31,7 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
 qt_standard_project_setup(REQUIRES 6.8)
 
 add_subdirectory(src)
+add_subdirectory(tools/render-icon)
 
 enable_testing()
 add_subdirectory(tests)

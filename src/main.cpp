@@ -11,6 +11,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
@@ -23,6 +24,7 @@ int main(int argc, char* argv[]) {
     QCoreApplication::setApplicationName(QStringLiteral("SignatureMaster"));
     QCoreApplication::setApplicationVersion(QStringLiteral(SM_VERSION));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Signature Master"));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/SignatureMaster/icons/app.svg")));
     // The window hides to the tray on close; only the tray menu quits.
     QGuiApplication::setQuitOnLastWindowClosed(false);
 

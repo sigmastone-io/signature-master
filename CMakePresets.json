@@ -11,6 +11,7 @@
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-windows",
         "VCPKG_HOST_TRIPLET": "x64-windows",
+        "X_VCPKG_APPLOCAL_DEPS_INSTALL": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }

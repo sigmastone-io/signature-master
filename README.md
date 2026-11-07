@@ -50,6 +50,23 @@ build\dev\signature-master.exe
 `windeployqt`, so the executable runs straight from the build directory. A `CMakeUserPresets.json`
 (ignored by git) is the place for a preset that sets `VCPKG_ROOT` for your machine.
 
+## Packaging
+
+```powershell
+.\packaging\windows\build-msi.ps1
+```
+
+Builds the `release` preset, installs it into `build\stage` (the executable, the Qt runtime, the
+libraries vcpkg built and the Visual C++ runtime, flat), and packages that with WiX 5.0.2 into
+`build\msi\signature-master-<version>-x64.msi`: per machine, `Program Files\Signature Master`, a
+Start menu shortcut, and a running desk closed before an upgrade. The WiX tool is installed on
+demand as a .NET global tool; WiX 6 and later are not used (their maintenance-fee EULA is not
+accepted).
+
+The icon is `src/qml/icons/app.svg`; `packaging/windows/signature-master.ico` is rendered from it
+with `cmake --build --preset dev --target icon` and committed, since the executable's resources
+and the MSI both carry it.
+
 ## Code style
 
 C++ and QML are formatted with clang-format, using the `.clang-format` at the repository root.

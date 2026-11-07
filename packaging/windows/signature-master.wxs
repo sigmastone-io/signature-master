@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  The Signature Master MSI: the application and the Qt runtime beside it, a Start menu shortcut,
+  nothing else. No service, no settings; the application keeps its own settings per user and
+  registers itself for "Start with Windows" from inside.
+
+  Per machine, into Program Files, because a tray application that signs release files belongs
+  to the machine rather than to a profile, and because the signing certificate's card driver is
+  installed per machine too.
+
+  Three preprocessor variables, all supplied by build-msi.ps1:
+
+    Version   the MSI ProductVersion - three numeric fields, no pre-release suffix
+    StageDir  the directory holding the executable and its runtime, as `cmake -install` laid it
+              out; every file under it is packaged
+    IconFile  the .ico shown in Add or Remove Programs and on the shortcut
+-->
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+      Name="Signature Master"
+      Manufacturer="Sigmastone"
+      Version="$(var.Version)"
+      UpgradeCode="2c3f5b2a-7d2e-4c7a-9b6d-1f0e8a4c9d31"
+      Scope="perMachine"
+      Compressed="yes"
+      InstallerVersion="500">
+
+    <!-- A pre-release tag's suffix is not part of an MSI version, so two pre-releases of one
+         version must still replace each other. -->
+    <MajorUpgrade
+        AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="SignatureMasterIcon" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="SignatureMasterIcon" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- The desk lives in the tray; an upgrade or removal has to close it first, or Windows
+         Installer finds the executable in use and asks for a restart. -->
+    <util:CloseApplication
+        Id="CloseRunningDesk"
+        Target="signature-master.exe"
+        CloseMessage="yes"
+        RebootPrompt="no"
+        Timeout="15" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Signature Master" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ShortcutFolder" Name="Sigmastone" />
+    </StandardDirectory>
+
+    <!-- Everything the install step laid out: the executable, the Qt libraries, plugins and QML
+         modules, and the libraries they depend on. Harvested at build time so a Qt upgrade needs
+         no edit here. -->
+    <ComponentGroup Id="Application" Directory="INSTALLFOLDER">
+      <Files Include="$(var.StageDir)\**" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="Shortcuts" Directory="ShortcutFolder">
+      <!-- A shortcut component in a per-machine package keys on a per-user registry value by
+           convention; it is what lets Windows Installer tell the shortcut is there for this user. -->
+      <Component Id="StartMenuShortcut" Guid="6f2c1a0e-3b8d-4f6a-9c2e-5d7b8e1a2f43">
+        <Shortcut
+            Id="StartMenuEntry"
+            Name="Signature Master"
+            Description="Signing desk for Sigmastone releases"
+            Target="[INSTALLFOLDER]signature-master.exe"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="SignatureMasterIcon" />
+        <RemoveFolder Id="RemoveShortcutFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Sigmastone\SignatureMaster" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Desk" Title="Signature Master" Level="1">
+      <ComponentGroupRef Id="Application" />
+      <ComponentGroupRef Id="Shortcuts" />
+    </Feature>
+
+  </Package>
+</Wix>

@@ -55,6 +55,7 @@ set(sm_qml_files
     qml/pages/SettingsPage.qml)
 
 set(sm_resource_files
+    qml/icons/app.svg
     qml/icons/bolt.svg
     qml/icons/log.svg
     qml/icons/requests.svg
@@ -108,6 +109,11 @@ target_link_libraries(signature-master PRIVATE
     Qt6::HttpServer)
 
 if(WIN32)
+    # The icon and the version resource, from app.rc.in and the project version.
+    file(TO_NATIVE_PATH "${CMAKE_SOURCE_DIR}/packaging/windows/signature-master.ico" SM_RC_ICON)
+    string(REPLACE "\\" "\\\\" SM_RC_ICON "${SM_RC_ICON}")
+    configure_file(app.rc.in "${CMAKE_CURRENT_BINARY_DIR}/app.rc" @ONLY)
+    target_sources(signature-master PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
     target_link_libraries(signature-master PRIVATE crypt32 cryptui version)
     target_compile_definitions(signature-master PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE)
     # A console in development builds keeps qDebug visible; the release build is a plain GUI
@@ -120,6 +126,30 @@ endif()
 if(MSVC)
     # C4702 (unreachable code) fires inside Qt's own headers at /W4.
     target_compile_options(signature-master PRIVATE /W4 /wd4702 /permissive- /utf-8 /Zc:__cplusplus)
+endif()
+
+# `cmake --install` lays the executable, the libraries vcpkg built (X_VCPKG_APPLOCAL_DEPS_INSTALL
+# in the presets), the Qt plugins and QML modules, and the Visual C++ runtime flat into the
+# prefix, the same shape as the build tree; the MSI packages that tree. windeployqt is run here
+# directly rather than through Qt's deploy script, which insists on bin/ and Qt6/ subdirectories.
+install(TARGETS signature-master RUNTIME DESTINATION .)
+if(WIN32)
+    install(CODE "
+        execute_process(
+            COMMAND \"$<TARGET_FILE:Qt6::windeployqt>\"
+                --no-compiler-runtime
+                --no-translations
+                --qmldir \"${CMAKE_CURRENT_SOURCE_DIR}/qml\"
+                --qml-deploy-dir \"\${CMAKE_INSTALL_PREFIX}\"
+                \"\${CMAKE_INSTALL_PREFIX}/signature-master.exe\"
+            RESULT_VARIABLE sm_deploy_result)
+        if(NOT sm_deploy_result EQUAL 0)
+            message(FATAL_ERROR \"windeployqt failed: \${sm_deploy_result}\")
+        endif()")
+    # msvcp140.dll, vcruntime140.dll and vcruntime140_1.dll beside the executable, so the MSI
+    # needs no redistributable installer.
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ".")
+    include(InstallRequiredSystemLibraries)
 endif()
 
 if(WIN32 AND SM_DEPLOY_QT)
