@@ -8,6 +8,8 @@
 #include <QString>
 
 class ApiServer;
+class Authenticator;
+class RequestStore;
 class Settings;
 
 // What the desk is doing right now: whether the port is open, which certificate is in use, how
@@ -36,7 +38,10 @@ class DeskStatus : public QObject {
     Q_PROPERTY(QString logFilePath READ logFilePath CONSTANT)
 
 public:
-    explicit DeskStatus(Settings* settings, QObject* parent = nullptr);
+    DeskStatus(Settings* settings,
+               RequestStore* store,
+               Authenticator* authenticator,
+               QObject* parent = nullptr);
     ~DeskStatus() override;
 
     static DeskStatus* instance();
@@ -55,8 +60,8 @@ public:
     bool certificateExpired() const;
     QString certificateSummary() const;
 
-    int pendingCount() const { return m_pendingCount; }
-    QDateTime lastRequestAt() const { return m_lastRequestAt; }
+    int pendingCount() const;
+    QDateTime lastRequestAt() const;
     QString logFilePath() const;
 
     Q_INVOKABLE void chooseCertificate(quintptr ownerWindow = 0);
@@ -71,11 +76,10 @@ private:
     static QString reachableAddress(const QString& bindAddress);
 
     Settings* m_settings;
+    RequestStore* m_store;
     ApiServer* m_server;
     bool m_listening = false;
     QString m_listenError;
     QString m_endpoint;
     CertificateInfo m_certificate;
-    int m_pendingCount = 0;
-    QDateTime m_lastRequestAt;
 };

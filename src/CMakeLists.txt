@@ -1,9 +1,40 @@
+# Everything below the window, shared with the tests.
+set(sm_core_sources
+    app/ApiServer.cpp
+    app/ApiServer.h
+    app/Authenticator.cpp
+    app/Authenticator.h
+    app/CertificateStore.cpp
+    app/CertificateStore.h
+    app/FileVersion.cpp
+    app/FileVersion.h
+    app/RequestStore.cpp
+    app/RequestStore.h
+    app/Settings.cpp
+    app/Settings.h
+    app/SigningRequest.cpp
+    app/SigningRequest.h)
+set(SM_CORE_SOURCES "")
+foreach(file IN LISTS sm_core_sources)
+    list(APPEND SM_CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+endforeach()
+set(SM_CORE_SOURCES "${SM_CORE_SOURCES}" PARENT_SCOPE)
+set(SM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" PARENT_SCOPE)
+
 qt_add_executable(signature-master
     main.cpp
     app/ApiServer.cpp
     app/ApiServer.h
+    app/Authenticator.cpp
+    app/Authenticator.h
     app/CertificateStore.cpp
     app/CertificateStore.h
+    app/FileVersion.cpp
+    app/FileVersion.h
+    app/RequestStore.cpp
+    app/RequestStore.h
+    app/SigningRequest.cpp
+    app/SigningRequest.h
     app/TrayController.cpp
     app/TrayController.h)
 
@@ -14,9 +45,11 @@ set(sm_qml_files
     qml/Main.qml
     qml/Theme.qml
     qml/components/Banner.qml
+    qml/components/CheckRow.qml
     qml/components/Fact.qml
     qml/components/RailItem.qml
     qml/components/SettingsCard.qml
+    qml/components/StatePill.qml
     qml/components/StatusFooter.qml
     qml/components/TextRow.qml
     qml/components/ToggleRow.qml
@@ -50,6 +83,8 @@ qt_add_qml_module(signature-master
     SOURCES
         app/DeskStatus.cpp
         app/DeskStatus.h
+        app/RequestModel.cpp
+        app/RequestModel.h
         app/Settings.cpp
         app/Settings.h)
 
@@ -76,7 +111,7 @@ target_link_libraries(signature-master PRIVATE
     Qt6::HttpServer)
 
 if(WIN32)
-    target_link_libraries(signature-master PRIVATE crypt32 cryptui)
+    target_link_libraries(signature-master PRIVATE crypt32 cryptui version)
     target_compile_definitions(signature-master PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE)
     # A console in development builds keeps qDebug visible; the release build is a plain GUI
     # application.

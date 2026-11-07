@@ -43,6 +43,8 @@ class Settings : public QObject {
 
 public:
     explicit Settings(QObject* parent = nullptr);
+    // Settings kept in a file of the caller's choosing, for tests.
+    explicit Settings(const QString& iniPath, QObject* parent = nullptr);
     ~Settings() override;
 
     static Settings* instance();
@@ -101,6 +103,7 @@ Q_SIGNALS:
     void allowedRefsChanged();
 
 private:
+    void load();
     template <typename T>
     bool update(const char* key, T& field, const T& value);
 

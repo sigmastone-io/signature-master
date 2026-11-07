@@ -1,6 +1,7 @@
 #include "TrayController.h"
 
 #include "DeskStatus.h"
+#include "RequestStore.h"
 #include "Settings.h"
 
 #include <QAction>
@@ -11,8 +12,11 @@
 #include <QStyleHints>
 #include <QSvgRenderer>
 
-TrayController::TrayController(Settings* settings, DeskStatus* desk, QObject* parent)
-    : QObject(parent), m_settings(settings), m_desk(desk) {
+TrayController::TrayController(Settings* settings,
+                               DeskStatus* desk,
+                               RequestStore* store,
+                               QObject* parent)
+    : QObject(parent), m_settings(settings), m_desk(desk), m_store(store) {
     QFile svg(QStringLiteral(":/qt/qml/SignatureMaster/icons/shield.svg"));
     if (svg.open(QIODevice::ReadOnly)) {
         m_shieldSvg = svg.readAll();
@@ -46,10 +50,12 @@ TrayController::TrayController(Settings* settings, DeskStatus* desk, QObject* pa
                     Q_EMIT openRequested();
                 }
             });
+    connect(&m_tray, &QSystemTrayIcon::messageClicked, this, &TrayController::openRequested);
 
     connect(m_desk, &DeskStatus::changed, this, &TrayController::refresh);
     connect(m_settings, &Settings::autoSignChanged, this, &TrayController::refresh);
     connect(m_settings, &Settings::pauseListeningChanged, this, &TrayController::refresh);
+    connect(m_store, &RequestStore::entered, this, &TrayController::notify);
     connect(QGuiApplication::styleHints(),
             &QStyleHints::colorSchemeChanged,
             this,
@@ -76,6 +82,48 @@ void TrayController::refresh() {
                                                         : QStringLiteral("Pause listening"));
 }
 
+void TrayController::notify(const QString& id, RequestState state) {
+    const std::optional<SigningRequest> request = m_store->find(id);
+    if (!request.has_value()) {
+        return;
+    }
+    const QString files = request->files.size() == 1
+                              ? QStringLiteral("1 file")
+                              : QStringLiteral("%1 files").arg(request->files.size());
+    const QString what = QStringLiteral("%1 %2, %3, by %4.")
+                             .arg(request->name(), request->refShort(), files, request->actor);
+    switch (state) {
+    case RequestState::Pending:
+        m_tray.showMessage(QStringLiteral("Signature requested"),
+                           what + (request->anyCheckUnverified()
+                                       ? QStringLiteral(" The caller is not verified.")
+                                       : QStringLiteral(" All checks passed.")),
+                           QSystemTrayIcon::Information,
+                           15000);
+        break;
+    case RequestState::Refused:
+        m_tray.showMessage(QStringLiteral("Signature refused"),
+                           what + QStringLiteral(" ") + request->reason,
+                           QSystemTrayIcon::Warning,
+                           15000);
+        break;
+    case RequestState::Signed:
+        if (request->approvedBy == QStringLiteral("automatic")) {
+            m_tray.showMessage(
+                QStringLiteral("Signed automatically"), what, QSystemTrayIcon::Information, 10000);
+        }
+        break;
+    case RequestState::Failed:
+        m_tray.showMessage(QStringLiteral("Signing failed"),
+                           what + QStringLiteral(" ") + request->reason,
+                           QSystemTrayIcon::Critical,
+                           15000);
+        break;
+    default:
+        break;
+    }
+}
+
 TrayController::State TrayController::currentState() const {
     if (!m_desk->certificateFound() || m_desk->certificateExpired() ||
         (!m_settings->pauseListening() && !m_desk->listening())) {
@@ -83,6 +131,11 @@ TrayController::State TrayController::currentState() const {
     }
     if (m_settings->pauseListening()) {
         return State::Paused;
+    }
+    for (const SigningRequest& request : m_store->requests()) {
+        if (request.state == RequestState::Signing) {
+            return State::Signing;
+        }
     }
     if (m_desk->pendingCount() > 0) {
         return State::Pending;

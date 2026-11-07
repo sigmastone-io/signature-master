@@ -38,6 +38,15 @@ Settings::Settings(QObject* parent)
                                QSettings::UserScope,
                                QStringLiteral("Sigmastone"),
                                QStringLiteral("SignatureMaster")) {
+    load();
+}
+
+Settings::Settings(const QString& iniPath, QObject* parent)
+    : QObject(parent), m_store(iniPath, QSettings::IniFormat) {
+    load();
+}
+
+void Settings::load() {
     Q_ASSERT(g_instance == nullptr);
     g_instance = this;
 

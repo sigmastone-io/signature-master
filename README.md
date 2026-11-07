@@ -54,8 +54,22 @@ build\dev\signature-master.exe
 
 C++ and QML are formatted with clang-format, using the `.clang-format` at the repository root.
 
+## Documents
+
+- `doc/01. gui-design.md`: the window, its sections, states, colours, tray and dialogs.
+- `doc/02. rest-api.md`: the routes a release job calls, the manifest, the request and its checks.
+
+## Tests
+
+```powershell
+ctest --test-dir build\dev --output-on-failure
+```
+
+`tst_api` drives a real listener on a loopback port through every route.
+
 ## Status
 
-The application shell: the window with its three sections, the settings, the tray icon and a REST
-listener answering `GET /health`. Requests, signing, the log and GitHub authentication are not
-built yet.
+The window, the settings, the tray icon, the REST API with the request store and its checks, and
+the request list and detail with Reject. Signing with signtool, the signature log, the stored PIN
+and GitHub authentication are not built yet; every caller counts as unverified until the last one
+is.

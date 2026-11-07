@@ -1,4 +1,7 @@
+#include "app/Authenticator.h"
 #include "app/DeskStatus.h"
+#include "app/RequestModel.h"
+#include "app/RequestStore.h"
 #include "app/Settings.h"
 #include "app/TrayController.h"
 
@@ -32,7 +35,10 @@ int main(int argc, char* argv[]) {
     QQuickStyle::setStyle(QStringLiteral("FluentWinUI3"));
 
     Settings settings;
-    DeskStatus desk(&settings);
+    RequestStore store(&settings);
+    UnconfiguredAuthenticator authenticator;
+    DeskStatus desk(&settings, &store, &authenticator);
+    RequestModel requests(&store);
 
     QQmlApplicationEngine engine;
     QObject::connect(
@@ -51,7 +57,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    TrayController tray(&settings, &desk);
+    TrayController tray(&settings, &desk, &store);
     QObject::connect(&tray, &TrayController::openRequested, window, [window] {
         window->show();
         window->raise();

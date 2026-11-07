@@ -1,10 +1,12 @@
 #include "DeskStatus.h"
 
 #include "ApiServer.h"
+#include "RequestStore.h"
 #include "Settings.h"
 
 #include <QDesktopServices>
 #include <QDir>
+#include <QFileInfo>
 #include <QHostAddress>
 #include <QNetworkInterface>
 #include <QStandardPaths>
@@ -14,8 +16,12 @@ namespace {
 DeskStatus* g_instance = nullptr;
 }
 
-DeskStatus::DeskStatus(Settings* settings, QObject* parent)
-    : QObject(parent), m_settings(settings), m_server(new ApiServer(this)) {
+DeskStatus::DeskStatus(Settings* settings,
+                       RequestStore* store,
+                       Authenticator* authenticator,
+                       QObject* parent)
+    : QObject(parent), m_settings(settings), m_store(store),
+      m_server(new ApiServer(store, authenticator, this)) {
     Q_ASSERT(g_instance == nullptr);
     g_instance = this;
 
@@ -24,6 +30,9 @@ DeskStatus::DeskStatus(Settings* settings, QObject* parent)
     connect(m_settings, &Settings::pauseListeningChanged, this, &DeskStatus::restartListener);
     connect(
         m_settings, &Settings::certificateThumbprintChanged, this, &DeskStatus::refreshCertificate);
+    connect(m_store, &RequestStore::added, this, &DeskStatus::changed);
+    connect(m_store, &RequestStore::changed, this, &DeskStatus::changed);
+    connect(m_store, &RequestStore::removed, this, &DeskStatus::changed);
 
     m_certificate = CertificateStore::describe(m_settings->certificateThumbprint());
     restartListener();
@@ -62,6 +71,14 @@ QString DeskStatus::certificateSummary() const {
         (certificateExpired() ? QStringLiteral(", expired %1") : QStringLiteral(", expires %1"))
             .arg(m_certificate.notAfter.toLocalTime().toString(QStringLiteral("yyyy-MM-dd")));
     return summary;
+}
+
+int DeskStatus::pendingCount() const {
+    return m_store->pendingCount();
+}
+
+QDateTime DeskStatus::lastRequestAt() const {
+    return m_store->lastRequestAt().toLocalTime();
 }
 
 QString DeskStatus::logFilePath() const {

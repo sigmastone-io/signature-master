@@ -21,8 +21,12 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
     QuickControls2
     Svg
     Network
-    HttpServer)
+    HttpServer
+    Test)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
 add_subdirectory(src)
+
+enable_testing()
+add_subdirectory(tests)
