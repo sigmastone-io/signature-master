@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "signature-master",
+  "version-string": "0.1.0",
+  "description": "Signing desk for Sigmastone releases",
+  "builtin-baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
+  "dependencies": [
+    {
+      "name": "qtbase",
+      "default-features": false,
+      "features": [
+        "async-io",
+        "brotli",
+        "concurrent",
+        "dnslookup",
+        "doubleconversion",
+        "freetype",
+        "gui",
+        "harfbuzz",
+        "jpeg",
+        "network",
+        "opengl",
+        "openssl",
+        "pcre2",
+        "png",
+        "sessionmanager",
+        "testlib",
+        "thread",
+        "widgets",
+        "windeployqt",
+        "zstd"
+      ]
+    },
+    "qtdeclarative",
+    "qthttpserver",
+    "qtsvg",
+    "openssl"
+  ]
+}
