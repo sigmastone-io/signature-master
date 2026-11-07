@@ -3,13 +3,15 @@
 #include "ApiServer.h"
 #include "RequestStore.h"
 #include "Settings.h"
+#include "SignatureLog.h"
 
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QHostAddress>
 #include <QNetworkInterface>
-#include <QStandardPaths>
+#include <QProcess>
+#include <QRegularExpression>
 #include <QUrl>
 
 namespace {
@@ -82,9 +84,43 @@ QDateTime DeskStatus::lastRequestAt() const {
 }
 
 QString DeskStatus::logFilePath() const {
-    return QDir::toNativeSeparators(
-        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) +
-        QStringLiteral("/signatures.log"));
+    return SignatureLog::defaultPath();
+}
+
+QString DeskStatus::makeTestCertificate() {
+#ifdef Q_OS_WIN
+    // New-SelfSignedCertificate does in one line what CertCreateSelfSignCertificate needs a
+    // page for; the certificate lands in the user's personal store, non-exportable, three months.
+    QProcess powershell;
+    powershell.setProgram(QStringLiteral("powershell.exe"));
+    powershell.setArguments(
+        {QStringLiteral("-NoProfile"),
+         QStringLiteral("-NonInteractive"),
+         QStringLiteral("-Command"),
+         QStringLiteral("(New-SelfSignedCertificate -Type CodeSigningCert "
+                        "-Subject 'CN=Sigmastone Test Signing' "
+                        "-FriendlyName 'Sigmastone Test Signing (not for distribution)' "
+                        "-CertStoreLocation Cert:\\CurrentUser\\My "
+                        "-NotAfter (Get-Date).AddMonths(3) -KeyExportPolicy NonExportable)"
+                        ".Thumbprint")});
+    powershell.setProcessChannelMode(QProcess::MergedChannels);
+    powershell.start();
+    if (!powershell.waitForFinished(60000)) {
+        powershell.kill();
+        return QStringLiteral("PowerShell did not finish making the certificate.");
+    }
+    const QString output = QString::fromLocal8Bit(powershell.readAll()).trimmed();
+    const QString thumbprint = output.section(QLatin1Char('\n'), -1).trimmed().toLower();
+    static const QRegularExpression hex(QStringLiteral("^[0-9a-f]{40}$"));
+    if (powershell.exitCode() != 0 || !hex.match(thumbprint).hasMatch()) {
+        return QStringLiteral("The certificate was not made: %1").arg(output.right(300));
+    }
+    m_settings->setCertificateThumbprint(thumbprint);
+    refreshCertificate();
+    return {};
+#else
+    return QStringLiteral("Only on Windows.");
+#endif
 }
 
 void DeskStatus::chooseCertificate(quintptr ownerWindow) {

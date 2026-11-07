@@ -67,6 +67,9 @@ public:
     Q_INVOKABLE void chooseCertificate(quintptr ownerWindow = 0);
     Q_INVOKABLE void refreshCertificate();
     Q_INVOKABLE void openLogFolder();
+    // Makes a self-signed code signing certificate in the user's store and selects it. Returns
+    // an empty string, or what went wrong.
+    Q_INVOKABLE QString makeTestCertificate();
 
 Q_SIGNALS:
     void changed();

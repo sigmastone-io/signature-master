@@ -15,6 +15,7 @@
 #include <optional>
 
 class Settings;
+class SignatureLog;
 
 // Every request the desk has seen since it started, newest last, with the files of each under
 // the work directory. The REST routes and the window both go through here; nothing else changes
@@ -33,6 +34,8 @@ public:
     // How the store learns whether a usable certificate is in place; the default reads the
     // user's store for the configured thumbprint.
     void setCertificateProbe(std::function<CertificateInfo()> probe);
+    // Every outcome of a request is written here, one line per file.
+    void setLog(SignatureLog* log);
 
     // POST /requests. 201 when accepted, 403 when refused (the request is still listed), 400 when
     // the manifest is malformed (nothing is listed).
@@ -48,6 +51,13 @@ public:
 
     // From the window.
     bool reject(const QString& id, const QString& reason);
+
+    // From the signing service: pending -> signing, then one file at a time to signed or failed.
+    bool beginSigning(const QString& id, const QString& by);
+    bool markFileSigning(const QString& id, const QString& name);
+    bool markFileSigned(const QString& id, const QString& name, const QString& signedPath);
+    bool markFileFailed(const QString& id, const QString& name, const QString& error);
+    void noteProgress(const QString& id, const QString& name, const QString& message);
 
     const QList<SigningRequest>& requests() const { return m_requests; }
     std::optional<SigningRequest> find(const QString& id) const;
@@ -66,7 +76,9 @@ Q_SIGNALS:
 
 private:
     SigningRequest* mutableFind(const QString& id);
+    static RequestFile* fileOf(SigningRequest& request, const QString& name);
     void transition(SigningRequest& request, RequestState state, const QString& reason);
+    void record(const SigningRequest& request, RequestState state);
     void expireStale();
     void wipeLeftovers();
     static void wipe(const QString& directory);
@@ -74,6 +86,7 @@ private:
     static Reply error(int status, const QString& message);
 
     Settings* m_settings;
+    SignatureLog* m_log = nullptr;
     std::function<CertificateInfo()> m_certificateProbe;
     QList<SigningRequest> m_requests;
     QDateTime m_lastRequestAt;

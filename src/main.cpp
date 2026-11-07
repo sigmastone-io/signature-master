@@ -1,8 +1,12 @@
 #include "app/Authenticator.h"
 #include "app/DeskStatus.h"
+#include "app/LogModel.h"
 #include "app/RequestModel.h"
 #include "app/RequestStore.h"
 #include "app/Settings.h"
+#include "app/SignatureLog.h"
+#include "app/Signer.h"
+#include "app/SigningService.h"
 #include "app/TrayController.h"
 
 #include <QApplication>
@@ -51,10 +55,15 @@ int main(int argc, char* argv[]) {
     QQuickStyle::setStyle(QStringLiteral("FluentWinUI3"));
 
     Settings settings;
+    SignatureLog log(SignatureLog::defaultPath());
     RequestStore store(&settings);
+    store.setLog(&log);
     UnconfiguredAuthenticator authenticator;
+    SigntoolSigner signer(&settings);
+    SigningService signing(&settings, &store, &signer);
     DeskStatus desk(&settings, &store, &authenticator);
-    RequestModel requests(&store);
+    RequestModel requests(&store, &signing);
+    LogModel logEntries(&log);
 
     QQmlApplicationEngine engine;
     QObject::connect(

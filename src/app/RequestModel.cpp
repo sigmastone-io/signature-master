@@ -1,6 +1,7 @@
 #include "RequestModel.h"
 
 #include "RequestStore.h"
+#include "SigningService.h"
 
 #include <QLocale>
 #include <QVariantList>
@@ -27,8 +28,8 @@ QString shortHash(const QString& hash, int groups) {
 }
 } // namespace
 
-RequestModel::RequestModel(RequestStore* store, QObject* parent)
-    : QAbstractListModel(parent), m_store(store) {
+RequestModel::RequestModel(RequestStore* store, SigningService* signing, QObject* parent)
+    : QAbstractListModel(parent), m_store(store), m_signing(signing) {
     Q_ASSERT(g_instance == nullptr);
     g_instance = this;
 
@@ -139,6 +140,10 @@ int RequestModel::rowOf(const QString& id) const {
 
 bool RequestModel::reject(const QString& id, const QString& reason) {
     return m_store->reject(id, reason);
+}
+
+bool RequestModel::sign(const QString& id) {
+    return m_signing->approve(id, qEnvironmentVariable("USERNAME", QStringLiteral("signer")));
 }
 
 bool RequestModel::matches(const SigningRequest& request) const {

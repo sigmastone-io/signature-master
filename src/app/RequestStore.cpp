@@ -2,6 +2,7 @@
 
 #include "FileVersion.h"
 #include "Settings.h"
+#include "SignatureLog.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -52,6 +53,10 @@ RequestStore::RequestStore(Settings* settings, QObject* parent)
 
 void RequestStore::setCertificateProbe(std::function<CertificateInfo()> probe) {
     m_certificateProbe = std::move(probe);
+}
+
+void RequestStore::setLog(SignatureLog* log) {
+    m_log = log;
 }
 
 RequestStore::Reply RequestStore::error(int status, const QString& message) {
@@ -177,6 +182,7 @@ RequestStore::Reply RequestStore::create(const QJsonObject& manifest, const Auth
         request.state = RequestState::Refused;
         request.reason = reason;
         m_requests.append(request);
+        record(m_requests.last(), RequestState::Refused);
         Q_EMIT added(request.id);
         Q_EMIT entered(request.id, RequestState::Refused);
         return {403, request.toJson()};
@@ -306,11 +312,79 @@ bool RequestStore::reject(const QString& id, const QString& reason) {
     if (request == nullptr || request->state != RequestState::Pending) {
         return false;
     }
+    request->approvedBy = qEnvironmentVariable("USERNAME", QStringLiteral("signer"));
     transition(*request,
                RequestState::Rejected,
                reason.trimmed().isEmpty() ? QStringLiteral("rejected by the signer")
                                           : reason.trimmed());
     return true;
+}
+
+bool RequestStore::beginSigning(const QString& id, const QString& by) {
+    SigningRequest* request = mutableFind(id);
+    if (request == nullptr || request->state != RequestState::Pending) {
+        return false;
+    }
+    request->approvedBy = by.trimmed().isEmpty() ? QStringLiteral("signer") : by.trimmed();
+    transition(*request, RequestState::Signing, QString());
+    return true;
+}
+
+bool RequestStore::markFileSigning(const QString& id, const QString& name) {
+    SigningRequest* request = mutableFind(id);
+    RequestFile* file = request != nullptr ? fileOf(*request, name) : nullptr;
+    if (file == nullptr || request->state != RequestState::Signing) {
+        return false;
+    }
+    file->state = FileState::Signing;
+    request->updatedAt = QDateTime::currentDateTimeUtc();
+    Q_EMIT changed(request->id);
+    return true;
+}
+
+bool RequestStore::markFileSigned(const QString& id,
+                                  const QString& name,
+                                  const QString& signedPath) {
+    SigningRequest* request = mutableFind(id);
+    RequestFile* file = request != nullptr ? fileOf(*request, name) : nullptr;
+    if (file == nullptr || request->state != RequestState::Signing) {
+        return false;
+    }
+    file->state = FileState::Signed;
+    file->signedPath = signedPath;
+    file->error.clear();
+    bool allSigned = true;
+    for (const RequestFile& other : request->files) {
+        allSigned = allSigned && other.state == FileState::Signed;
+    }
+    if (allSigned) {
+        transition(*request, RequestState::Signed, QString());
+    } else {
+        request->updatedAt = QDateTime::currentDateTimeUtc();
+        Q_EMIT changed(request->id);
+    }
+    return true;
+}
+
+bool RequestStore::markFileFailed(const QString& id, const QString& name, const QString& error) {
+    SigningRequest* request = mutableFind(id);
+    RequestFile* file = request != nullptr ? fileOf(*request, name) : nullptr;
+    if (file == nullptr || request->state != RequestState::Signing) {
+        return false;
+    }
+    file->state = FileState::Failed;
+    file->error = error;
+    transition(*request, RequestState::Failed, QStringLiteral("%1: %2").arg(name, error));
+    return true;
+}
+
+void RequestStore::noteProgress(const QString& id, const QString& name, const QString& message) {
+    SigningRequest* request = mutableFind(id);
+    if (request == nullptr) {
+        return;
+    }
+    request->reason = QStringLiteral("%1, %2").arg(message, name);
+    Q_EMIT changed(request->id);
 }
 
 std::optional<SigningRequest> RequestStore::find(const QString& id) const {
@@ -341,16 +415,83 @@ SigningRequest* RequestStore::mutableFind(const QString& id) {
     return nullptr;
 }
 
+RequestFile* RequestStore::fileOf(SigningRequest& request, const QString& name) {
+    for (RequestFile& file : request.files) {
+        if (file.name == name) {
+            return &file;
+        }
+    }
+    return nullptr;
+}
+
 void RequestStore::transition(SigningRequest& request, RequestState state, const QString& reason) {
     request.state = state;
     request.reason = reason;
     request.updatedAt = QDateTime::currentDateTimeUtc();
-    if (isTerminal(state) && state != RequestState::Signed && !request.workDir.isEmpty()) {
-        // Nothing left to sign or to fetch: the files go now, the entry stays for the list.
-        wipe(request.workDir);
+    if (isTerminal(state) && !request.workDir.isEmpty()) {
+        if (state == RequestState::Signed) {
+            // The unsigned originals are done with; the signed copies wait for the job.
+            wipe(QDir(request.workDir).filePath(QStringLiteral("files")));
+        } else {
+            // Nothing left to sign or to fetch: the files go now, the entry stays for the list.
+            wipe(request.workDir);
+        }
+    }
+    if (isTerminal(state)) {
+        record(request, state);
     }
     Q_EMIT changed(request.id);
     Q_EMIT entered(request.id, state);
+}
+
+void RequestStore::record(const SigningRequest& request, RequestState state) {
+    if (m_log == nullptr) {
+        return;
+    }
+    QString by;
+    switch (state) {
+    case RequestState::Signed:
+    case RequestState::Failed:
+        by = request.approvedBy;
+        break;
+    case RequestState::Refused:
+        by = QStringLiteral("checks");
+        break;
+    case RequestState::Rejected:
+        by = request.approvedBy.isEmpty() ? QStringLiteral("signer") : request.approvedBy;
+        break;
+    case RequestState::Expired:
+        by = QStringLiteral("nobody");
+        break;
+    default:
+        return;
+    }
+    LogEntry entry;
+    entry.time = request.updatedAt;
+    entry.requestId = request.id;
+    entry.repository = request.repository;
+    entry.ref = request.ref;
+    entry.commit = request.commit;
+    entry.outcome = toString(state);
+    entry.by = by;
+    entry.reason = request.reason;
+    if (request.files.isEmpty()) {
+        m_log->append(entry);
+        return;
+    }
+    for (const RequestFile& file : request.files) {
+        LogEntry line = entry;
+        line.file = file.name;
+        line.sha256 = file.sha256;
+        if (state == RequestState::Failed) {
+            // Only the file that failed carries the error; the others were never reached or
+            // were signed before it.
+            line.outcome = file.state == FileState::Signed ? QStringLiteral("signed")
+                                                           : QStringLiteral("failed");
+            line.reason = file.state == FileState::Signed ? QString() : request.reason;
+        }
+        m_log->append(line);
+    }
 }
 
 void RequestStore::expireStale() {

@@ -4,6 +4,8 @@ set(sm_core_sources
     app/ApiServer.h
     app/Authenticator.cpp
     app/Authenticator.h
+    app/Authenticode.cpp
+    app/Authenticode.h
     app/CertificateStore.cpp
     app/CertificateStore.h
     app/FileVersion.cpp
@@ -12,8 +14,14 @@ set(sm_core_sources
     app/RequestStore.h
     app/Settings.cpp
     app/Settings.h
+    app/SignatureLog.cpp
+    app/SignatureLog.h
+    app/Signer.cpp
+    app/Signer.h
     app/SigningRequest.cpp
-    app/SigningRequest.h)
+    app/SigningRequest.h
+    app/SigningService.cpp
+    app/SigningService.h)
 set(SM_CORE_SOURCES "")
 foreach(file IN LISTS sm_core_sources)
     list(APPEND SM_CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
@@ -23,18 +31,7 @@ set(SM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" PARENT_SCOPE)
 
 qt_add_executable(signature-master
     main.cpp
-    app/ApiServer.cpp
-    app/ApiServer.h
-    app/Authenticator.cpp
-    app/Authenticator.h
-    app/CertificateStore.cpp
-    app/CertificateStore.h
-    app/FileVersion.cpp
-    app/FileVersion.h
-    app/RequestStore.cpp
-    app/RequestStore.h
-    app/SigningRequest.cpp
-    app/SigningRequest.h
+    ${sm_core_sources}
     app/TrayController.cpp
     app/TrayController.h)
 
@@ -83,10 +80,10 @@ qt_add_qml_module(signature-master
     SOURCES
         app/DeskStatus.cpp
         app/DeskStatus.h
+        app/LogModel.cpp
+        app/LogModel.h
         app/RequestModel.cpp
-        app/RequestModel.h
-        app/Settings.cpp
-        app/Settings.h)
+        app/RequestModel.h)
 
 # The generated QML type registration includes the SOURCES headers by file name.
 target_include_directories(signature-master PRIVATE

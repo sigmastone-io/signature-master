@@ -8,6 +8,7 @@
 #include <QVariantMap>
 
 class RequestStore;
+class SigningService;
 
 // The request list for QML, newest first, narrowed by a filter. Exposed as the Requests singleton.
 class RequestModel : public QAbstractListModel {
@@ -46,7 +47,7 @@ public:
         UnverifiedRole,
     };
 
-    explicit RequestModel(RequestStore* store, QObject* parent = nullptr);
+    RequestModel(RequestStore* store, SigningService* signing, QObject* parent = nullptr);
     ~RequestModel() override;
 
     static RequestModel* instance();
@@ -64,6 +65,8 @@ public:
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE int rowOf(const QString& id) const;
     Q_INVOKABLE bool reject(const QString& id, const QString& reason);
+    // The person at the desk approved it; signing starts at once.
+    Q_INVOKABLE bool sign(const QString& id);
 
 Q_SIGNALS:
     void filterChanged();
@@ -77,6 +80,7 @@ private:
     QVariant roleValue(const SigningRequest& request, int role) const;
 
     RequestStore* m_store;
+    SigningService* m_signing;
     QString m_filter = QStringLiteral("all");
     QStringList m_ids; // visible rows, newest first
 };

@@ -65,11 +65,14 @@ C++ and QML are formatted with clang-format, using the `.clang-format` at the re
 ctest --test-dir build\dev --output-on-failure
 ```
 
-`tst_api` drives a real listener on a loopback port through every route.
+`tst_api` drives a real listener on a loopback port through every route; `tst_signing` takes
+requests through approval, signing and the log with a fake signer. Signing with the real
+signtool is checked by hand: "Make a test certificate" in Settings, a request from a script, Sign.
 
 ## Status
 
-The window, the settings, the tray icon, the REST API with the request store and its checks, and
-the request list and detail with Reject. Signing with signtool, the signature log, the stored PIN
-and GitHub authentication are not built yet; every caller counts as unverified until the last one
-is.
+The window, the settings, the tray icon, the REST API with the request store and its checks, the
+request list and detail with Sign and Reject, signing with signtool (sign, check the signer,
+verify), automatic signing for requests whose every check passed, and the signature log with its
+viewer and CSV export. The stored PIN and GitHub authentication are not built yet; every caller
+counts as unverified until the latter is, which keeps automatic signing off for them.

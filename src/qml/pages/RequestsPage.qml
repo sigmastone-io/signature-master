@@ -520,7 +520,7 @@ RowLayout {
 
                                         Label {
                                             Layout.preferredWidth: 90
-                                            text: modelData.state === "expected" ? "waiting" : modelData.state === "received" ? "none yet" : modelData.state
+                                            text: modelData.state === "expected" ? "waiting" : modelData.state === "received" ? "none yet" : modelData.state === "signing" ? "signing…" : modelData.state
                                             color: modelData.state === "signed" ? Theme.signed : modelData.state === "failed" ? Theme.refused : Theme.muted
                                         }
                                     }
@@ -577,15 +577,41 @@ RowLayout {
 
                     Button {
                         text: page.request ? "Sign " + page.fileWord(page.request.fileCount) : "Sign"
-                        enabled: false
+                        enabled: page.request !== null && Desk.certificateFound && !Desk.certificateExpired
                         highlighted: enabled
-                        ToolTip.visible: hovered
-                        ToolTip.text: "Signing arrives with the next step"
+                        ToolTip.visible: hovered && !enabled
+                        ToolTip.text: "No usable certificate"
+                        onClicked: {
+                            if (page.request) {
+                                Requests.sign(page.request.id);
+                            }
+                        }
+                    }
+                }
+
+                // Signing: what signtool is doing right now.
+                RowLayout {
+                    visible: page.request !== null && page.request.state === "signing"
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 20
+                    spacing: 10
+
+                    BusyIndicator {
+                        running: visible
+                        implicitWidth: 24
+                        implicitHeight: 24
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: page.request ? (page.request.reason.length > 0 ? page.request.reason : "Signing") + " (approved by " + page.request.approvedBy + ")" : ""
+                        wrapMode: Text.WordWrap
+                        color: Theme.muted
                     }
                 }
 
                 RowLayout {
-                    visible: page.request !== null && page.request.state !== "pending"
+                    visible: page.request !== null && page.request.state !== "pending" && page.request.state !== "signing"
                     Layout.fillWidth: true
                     Layout.bottomMargin: 20
                     spacing: 10

@@ -40,7 +40,7 @@ ScrollView {
 
                 ToggleRow {
                     title: "Remember PIN"
-                    description: "The certificate PIN is kept in Windows Credential Manager for this user and handed to the card on each signature. Off: the card's own dialog asks every time and the application never sees it. Arrives with the signing step."
+                    description: "The certificate PIN is kept in Windows Credential Manager for this user and handed to the card on each signature. Off: the card's own dialog asks every time and the application never sees it. Arrives with the card."
                     enabled: false
                     checked: Settings.rememberPin
                     onToggled: checked => Settings.rememberPin = checked
@@ -162,11 +162,24 @@ ScrollView {
                     }
 
                     Button {
+                        id: makeButton
                         text: "Make a test certificate"
-                        enabled: false
                         ToolTip.visible: hovered
-                        ToolTip.text: "Comes with the signing step"
+                        ToolTip.text: "A self-signed code signing certificate in your personal store, three months, for development only"
+                        onClicked: {
+                            enabled = false;
+                            testCertificateError.text = Desk.makeTestCertificate();
+                            enabled = true;
+                        }
                     }
+                }
+
+                Label {
+                    id: testCertificateError
+                    visible: text.length > 0
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    color: Theme.refused
                 }
 
                 TextRow {
