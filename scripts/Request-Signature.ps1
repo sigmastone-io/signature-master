@@ -33,8 +33,10 @@
     one the signer is not checked, only that a signature is present.
 
 .PARAMETER Token
-    Sent as a bearer token. What it is depends on the authentication scheme the desk is
-    configured for; until one exists the desk records the caller as unverified.
+    A GitHub Actions OIDC token, sent as the bearer. Under GitHub Actions with `id-token: write`
+    on the job it is requested here, with an audience bound to this request's manifest, so pass
+    nothing. Without a token the desk lists the request as unverified: a person can still
+    approve it, the desk never signs it automatically.
 
 .PARAMETER TimeoutMinutes
     How long to wait for a person at the desk. 20 by default.
@@ -141,7 +143,25 @@ $manifest = [ordered]@{
     actor      = $Actor
     files      = @($resolved | ForEach-Object { [ordered]@{ name = $_.Name; size = $_.Size; sha256 = $_.Sha256 } })
 }
-$created = Invoke-Desk -Method Post -Path "/requests" -Body ($manifest | ConvertTo-Json -Depth 5)
+# The body is sent as these exact bytes: the token's audience is their SHA-256, which is how the
+# desk knows the token was minted for this manifest and no other.
+$body = [System.Text.Encoding]::UTF8.GetBytes(($manifest | ConvertTo-Json -Depth 5 -Compress))
+$bodyHash = ([System.Security.Cryptography.SHA256]::Create().ComputeHash($body) | ForEach-Object { $_.ToString("x2") }) -join ''
+$audience = "signature-master:$bodyHash"
+
+if (-not $Token -and $env:ACTIONS_ID_TOKEN_REQUEST_URL -and $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN) {
+    # GitHub Actions: an ID token for this run, bound to this manifest. Needs `id-token: write`.
+    $tokenUri = "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=$([uri]::EscapeDataString($audience))"
+    $issued = Invoke-RestMethod -Uri $tokenUri -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+    $Token = $issued.value
+    if (-not $Token) { throw "GitHub did not issue an ID token; is id-token: write set on the job?" }
+    $headers["Authorization"] = "Bearer $Token"
+    Write-Host "Holding a GitHub Actions token bound to this manifest"
+} elseif (-not $Token) {
+    Write-Host "No token: the desk will list this request as unverified, for approval by hand"
+}
+
+$created = Invoke-Desk -Method Post -Path "/requests" -Body $body
 if ($created.Status -eq 403) {
     throw "The desk refused the request: $(Get-Reason $created)"
 }

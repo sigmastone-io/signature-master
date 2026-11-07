@@ -10,7 +10,9 @@ release job can stop, ask for a signature, and carry on with the signed files.
   is what lets the certificate's own PIN dialog appear.
 - It opens a port and listens over a REST API. Release jobs send the files to sign there and fetch
   the signed copies back.
-- Callers authenticate through GitHub.
+- A GitHub Actions run authenticates with its OIDC token, bound to the request it sends. A
+  request without a token is listed as unverified: a person can still approve it, it is never
+  signed automatically.
 - Files are signed with the certificate in the user's certificate store. Until the production
   certificate is in place, a temporary self-signed certificate is used; it is not trusted by
   anyone and must not be used for anything that is published.
@@ -64,9 +66,11 @@ library.
 opens a request from the `GITHUB_*` variables (or its parameters), uploads the files, waits for
 the desk, fetches the signed copies, checks the signer, the signature status and the timestamp,
 and only then replaces the originals in place. Any other outcome fails with the desk's reason.
-`SIGNING_DESK`, `SIGNING_THUMBPRINT` and `SIGNING_TOKEN` in the environment stand in for the
-parameters; `-AllowUntrustedSigner` is for a self-signed test certificate and never for a
-release.
+Under GitHub Actions it first asks for an ID token bound to the manifest it is about to send
+(the job needs `permissions: id-token: write`); elsewhere it sends none and the desk lists the
+request as unverified. `SIGNING_DESK`, `SIGNING_THUMBPRINT` and `SIGNING_TOKEN` in the
+environment stand in for the parameters; `-AllowUntrustedSigner` is for a self-signed test
+certificate and never for a release.
 
 ## Packaging
 
@@ -108,6 +112,6 @@ signtool is checked by hand: "Make a test certificate" in Settings, a request fr
 
 The window, the settings, the tray icon, the REST API with the request store and its checks, the
 request list and detail with Sign and Reject, signing with signtool (sign, check the signer,
-verify), automatic signing for requests whose every check passed, and the signature log with its
-viewer and CSV export. The stored PIN and GitHub authentication are not built yet; every caller
-counts as unverified until the latter is, which keeps automatic signing off for them.
+verify), automatic signing for requests whose every check passed, the signature log with its
+viewer and CSV export, GitHub Actions OIDC authentication, and the job-side scripts. The stored
+PIN is not built yet; it waits for the card.

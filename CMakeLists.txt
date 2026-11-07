@@ -28,6 +28,8 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
     HttpServer
     Test)
 
+find_package(OpenSSL REQUIRED) # RS256 verification of the GitHub Actions tokens
+
 qt_standard_project_setup(REQUIRES 6.8)
 
 add_subdirectory(src)

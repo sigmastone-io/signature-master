@@ -10,6 +10,10 @@ set(sm_core_sources
     app/CertificateStore.h
     app/FileVersion.cpp
     app/FileVersion.h
+    app/Jwt.cpp
+    app/Jwt.h
+    app/JwksCache.cpp
+    app/JwksCache.h
     app/RequestStore.cpp
     app/RequestStore.h
     app/Settings.cpp
@@ -106,7 +110,8 @@ target_link_libraries(signature-master PRIVATE
     Qt6::QuickControls2
     Qt6::Svg
     Qt6::Network
-    Qt6::HttpServer)
+    Qt6::HttpServer
+    OpenSSL::Crypto)
 
 if(WIN32)
     # The icon and the version resource, from app.rc.in and the project version.

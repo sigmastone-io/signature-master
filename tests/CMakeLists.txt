@@ -17,7 +17,8 @@ function(sm_add_test name)
         Qt6::Network
         Qt6::HttpServer
         Qt6::Qml
-        Qt6::Test)
+        Qt6::Test
+        OpenSSL::Crypto)
     if(WIN32)
         target_link_libraries(${name} PRIVATE crypt32 cryptui version)
         target_compile_definitions(${name} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE)
@@ -30,3 +31,4 @@ endfunction()
 
 sm_add_test(tst_api)
 sm_add_test(tst_signing)
+sm_add_test(tst_oidc)

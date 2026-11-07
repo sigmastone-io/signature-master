@@ -87,7 +87,14 @@ void ApiServer::addRoutes() {
             if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
                 return problem(400, QStringLiteral("the body must be a JSON object"));
             }
-            const AuthResult auth = m_authenticator->authenticate(request);
+            QByteArray bearer;
+            const QByteArray authorization =
+                request.value(QByteArrayLiteral("Authorization")).trimmed();
+            if (authorization.startsWith("Bearer ")) {
+                bearer = authorization.mid(7).trimmed();
+            }
+            const AuthResult auth = m_authenticator->authenticate(
+                bearer, request.body(), document.object(), request.remoteAddress().toString());
             return reply(m_store->create(document.object(), auth));
         });
 

@@ -1,5 +1,6 @@
 #include "app/Authenticator.h"
 #include "app/DeskStatus.h"
+#include "app/JwksCache.h"
 #include "app/LogModel.h"
 #include "app/RequestModel.h"
 #include "app/RequestStore.h"
@@ -60,7 +61,11 @@ int main(int argc, char* argv[]) {
     SignatureLog log(SignatureLog::defaultPath());
     RequestStore store(&settings);
     store.setLog(&log);
-    UnconfiguredAuthenticator authenticator;
+    // GitHub's signing keys; SM_OIDC_JWKS_URL points a development desk at a local JWKS.
+    const QString jwksOverride = qEnvironmentVariable("SM_OIDC_JWKS_URL");
+    JwksCache keys(jwksOverride.isEmpty() ? JwksCache::gitHubActionsJwks() : QUrl(jwksOverride));
+    keys.refreshInBackground();
+    GitHubOidcAuthenticator authenticator(&settings, &keys);
     SigntoolSigner signer(&settings);
     SigningService signing(&settings, &store, &signer);
     DeskStatus desk(&settings, &store, &authenticator);

@@ -270,7 +270,7 @@ ScrollView {
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.margins: 10
-                        text: "Callers prove who they are through GitHub. The exact scheme is still to be decided; this card holds whatever it needs."
+                        text: "A GitHub Actions run proves itself with its OIDC token, bound to the request it sends; the desk checks the token against GitHub's keys and these three rules. A request without a token is listed as unverified: you can still approve it by hand, it is never signed automatically."
                         wrapMode: Text.WordWrap
                     }
                 }
