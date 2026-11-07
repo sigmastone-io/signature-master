@@ -1,0 +1,23 @@
+# CMake build trees and IDE output
+build/
+out/
+.vs/
+.idea/
+.cache/
+cmake-build-*/
+CMakeUserPresets.json
+
+# vcpkg manifest mode installs into the source tree
+vcpkg_installed/
+
+# Qt Creator and Visual Studio per-user files
+*.user
+*.autosave
+
+# Signing material that must never be committed
+*.pfx
+*.p12
+*.cer
+*.crt
+*.key
+secrets/
