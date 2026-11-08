@@ -21,6 +21,7 @@ constexpr auto kWorkDirectory = "listening/workDirectory";
 constexpr auto kAllowedOwner = "callers/owner";
 constexpr auto kAllowedRepositories = "callers/repositories";
 constexpr auto kAllowedRefs = "callers/refs";
+constexpr auto kDismissedNotices = "notices/dismissed";
 
 constexpr auto kRunKey = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 constexpr auto kRunValue = "SignatureMaster";
@@ -76,6 +77,34 @@ void Settings::load() {
                                 .toStringList();
     m_allowedRefs =
         m_store.value(QLatin1String(kAllowedRefs), QStringLiteral("refs/tags/v*")).toString();
+    m_dismissedNotices = m_store.value(QLatin1String(kDismissedNotices)).toStringList();
+}
+
+bool Settings::isDismissed(const QString& key) const {
+    return m_dismissedNotices.contains(key);
+}
+
+void Settings::dismissNotice(const QString& key) {
+    if (key.isEmpty() || m_dismissedNotices.contains(key)) {
+        return;
+    }
+    QStringList list = m_dismissedNotices;
+    list.append(key);
+    if (update(kDismissedNotices, m_dismissedNotices, list)) {
+        Q_EMIT dismissedNoticesChanged();
+    }
+}
+
+void Settings::forgetNotices(const QString& prefix) {
+    QStringList list;
+    for (const QString& key : m_dismissedNotices) {
+        if (!key.startsWith(prefix)) {
+            list.append(key);
+        }
+    }
+    if (update(kDismissedNotices, m_dismissedNotices, list)) {
+        Q_EMIT dismissedNoticesChanged();
+    }
 }
 
 Settings::~Settings() {
@@ -113,6 +142,10 @@ bool Settings::update(const char* key, T& field, const T& value) {
 
 void Settings::setAutoSign(bool on) {
     if (update(kAutoSign, m_autoSign, on)) {
+        if (!on) {
+            // Switching it on again is news again.
+            forgetNotices(QStringLiteral("auto-sign"));
+        }
         Q_EMIT autoSignChanged();
     }
 }

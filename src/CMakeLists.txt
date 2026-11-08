@@ -45,7 +45,7 @@ qt_add_executable(signature-master
 set(sm_qml_files
     qml/Main.qml
     qml/Theme.qml
-    qml/components/Banner.qml
+    qml/components/Toast.qml
     qml/components/CheckRow.qml
     qml/components/Fact.qml
     qml/components/RailItem.qml

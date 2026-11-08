@@ -39,6 +39,10 @@ class Settings : public QObject {
                    NOTIFY allowedRepositoriesChanged)
     Q_PROPERTY(QString allowedRefs READ allowedRefs WRITE setAllowedRefs NOTIFY allowedRefsChanged)
 
+    // Notices the person has dismissed, by key; a notice whose key is here stays hidden until
+    // the state it describes goes away and comes back.
+    Q_PROPERTY(QStringList dismissedNotices READ dismissedNotices NOTIFY dismissedNoticesChanged)
+
     Q_PROPERTY(QString filePath READ filePath CONSTANT)
 
 public:
@@ -65,6 +69,13 @@ public:
     void setTimestampUrl(const QString& url);
     QString signtoolPath() const { return m_signtoolPath; }
     void setSigntoolPath(const QString& path);
+
+    QStringList dismissedNotices() const { return m_dismissedNotices; }
+    Q_INVOKABLE bool isDismissed(const QString& key) const;
+    Q_INVOKABLE void dismissNotice(const QString& key);
+    // Forgets every dismissed notice whose key starts with `prefix`, so that it shows again when
+    // its state returns.
+    void forgetNotices(const QString& prefix);
 
     QString bindAddress() const { return m_bindAddress; }
     void setBindAddress(const QString& address);
@@ -101,6 +112,7 @@ Q_SIGNALS:
     void allowedOwnerChanged();
     void allowedRepositoriesChanged();
     void allowedRefsChanged();
+    void dismissedNoticesChanged();
 
 private:
     void load();
@@ -120,4 +132,5 @@ private:
     QString m_allowedOwner;
     QStringList m_allowedRepositories;
     QString m_allowedRefs;
+    QStringList m_dismissedNotices;
 };

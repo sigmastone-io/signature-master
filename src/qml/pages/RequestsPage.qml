@@ -76,7 +76,7 @@ RowLayout {
             anchors.fill: parent
             spacing: 0
 
-            Flow {
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.margins: 12
                 Layout.bottomMargin: 8
@@ -100,14 +100,15 @@ RowLayout {
                     delegate: Button {
                         required property var modelData
 
+                        Layout.fillWidth: true
                         text: modelData.label
                         checkable: true
                         checked: Requests.filter === modelData.key
                         autoExclusive: true
                         font.pixelSize: 12
                         implicitHeight: 26
-                        leftPadding: 10
-                        rightPadding: 10
+                        leftPadding: 6
+                        rightPadding: 6
                         onClicked: Requests.filter = modelData.key
                     }
                 }
