@@ -17,6 +17,14 @@ release job can stop, ask for a signature, and carry on with the signed files.
   certificate is in place, a temporary self-signed certificate is used; it is not trusted by
   anyone and must not be used for anything that is published.
 
+## The tray icon
+
+Windows 11 files a new tray icon under the hidden ones. If the taskbar's hidden-icon menu is
+switched off, the icon is not visible at all until it is switched on once by hand: Settings,
+Personalization, Taskbar, Other system tray icons, Signature Master. Windows remembers that per
+executable path, so it is needed once per installation. The desk also marks its own entry as
+promoted, which Windows honours on some builds.
+
 ## Settings
 
 | Setting | Effect |
