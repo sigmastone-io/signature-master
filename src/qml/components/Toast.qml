@@ -103,7 +103,7 @@ Rectangle {
             text: "✕"
             font.pixelSize: 12
             ToolTip.visible: hovered
-            ToolTip.text: "Dismiss; the footer keeps saying it"
+            ToolTip.text: "Dismiss"
             onClicked: toast.dismissed()
         }
     }

@@ -61,6 +61,10 @@ set(sm_qml_files
 set(sm_resource_files
     qml/icons/app.svg
     qml/icons/bolt.svg
+    qml/icons/certificate.svg
+    qml/icons/key.svg
+    qml/icons/network.svg
+    qml/icons/pen.svg
     qml/icons/log.svg
     qml/icons/requests.svg
     qml/icons/settings.svg
