@@ -40,6 +40,7 @@ Item {
 
         RowLayout {
             anchors.fill: parent
+            anchors.margins: 1 // inside the card's border
             spacing: 0
 
             // The sections.
@@ -47,6 +48,17 @@ Item {
                 Layout.preferredWidth: 220
                 Layout.fillHeight: true
                 color: Theme.rail
+                // A clip is rectangular, so the sidebar carries the card's rounding itself on the
+                // left and is squared off on the right.
+                radius: card.radius - 1
+
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: parent.radius
+                    color: parent.color
+                }
 
                 ColumnLayout {
                     anchors.fill: parent
