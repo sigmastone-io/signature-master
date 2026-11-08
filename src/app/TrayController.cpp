@@ -5,12 +5,16 @@
 #include "Settings.h"
 
 #include <QAction>
+#include <QCoreApplication>
+#include <QDir>
 #include <QFile>
 #include <QGuiApplication>
 #include <QPainter>
 #include <QPixmap>
+#include <QSettings>
 #include <QStyleHints>
 #include <QSvgRenderer>
+#include <QTimer>
 
 TrayController::TrayController(Settings* settings,
                                DeskStatus* desk,
@@ -63,6 +67,28 @@ TrayController::TrayController(Settings* settings,
 
     refresh();
     m_tray.show();
+    // Explorer writes the icon's registry entry a moment after it appears; try twice.
+    QTimer::singleShot(1500, this, &TrayController::promoteInTaskbar);
+    QTimer::singleShot(8000, this, &TrayController::promoteInTaskbar);
+}
+
+void TrayController::promoteInTaskbar() {
+#ifdef Q_OS_WIN
+    const QString self = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+    QSettings tray(QStringLiteral("HKEY_CURRENT_USER\\Control Panel\\NotifyIconSettings"),
+                   QSettings::NativeFormat);
+    const QStringList groups = tray.childGroups();
+    for (const QString& group : groups) {
+        tray.beginGroup(group);
+        const QString executable = tray.value(QStringLiteral("ExecutablePath")).toString();
+        if (executable.compare(self, Qt::CaseInsensitive) == 0 &&
+            !tray.contains(QStringLiteral("IsPromoted"))) {
+            tray.setValue(QStringLiteral("IsPromoted"), 1);
+        }
+        tray.endGroup();
+    }
+    tray.sync();
+#endif
 }
 
 void TrayController::refresh() {

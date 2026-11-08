@@ -33,6 +33,10 @@ Q_SIGNALS:
 private:
     void refresh();
     void notify(const QString& id, RequestState state);
+    // Windows 11 puts a new tray icon in the hidden area, which some taskbars cannot even open.
+    // A desk nobody can see is no desk, so the icon promotes itself the first time Windows
+    // registers it; a person who later hides it again is left alone.
+    void promoteInTaskbar();
     State currentState() const;
     QIcon renderIcon(State state, int count) const;
     QString tooltipFor(State state) const;
