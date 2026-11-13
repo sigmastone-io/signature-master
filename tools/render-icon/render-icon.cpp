@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Sigmastone OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 // render-icon <app.svg> <out.ico>
 //
 // Rasterizes the SVG at every size Windows asks for and packs the PNGs into one .ico. Windows

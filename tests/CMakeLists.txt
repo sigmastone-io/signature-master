@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sigmastone OÜ
+# SPDX-License-Identifier: Apache-2.0
+
 # Each test is an executable over the core sources, with the request store on a temporary work
 # directory and a fake certificate probe. tst_api drives a real ApiServer over HTTP on a loopback
 # port; tst_signing drives the store and the signing service with a fake signer.

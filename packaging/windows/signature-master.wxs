@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-FileCopyrightText: 2026 Sigmastone OÜ -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 
 <!--
   The Signature Master MSI: the application and the Qt runtime beside it, a Start menu shortcut,

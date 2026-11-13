@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Sigmastone OÜ
+// SPDX-License-Identifier: Apache-2.0
+
 #include "Jwt.h"
 
 #include <QJsonDocument>

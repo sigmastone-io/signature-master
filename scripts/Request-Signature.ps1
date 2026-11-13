@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sigmastone OÜ
+# SPDX-License-Identifier: Apache-2.0
+
 <#
 .SYNOPSIS
     Has the signing desk sign release files, and replaces them with the signed copies.

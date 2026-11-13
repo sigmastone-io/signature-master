@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sigmastone OÜ
+# SPDX-License-Identifier: Apache-2.0
+
 # Renders the application icon from its SVG into the multi-size .ico the executable and the
 # installer carry. The .ico is committed; run this when the SVG changes:
 #
