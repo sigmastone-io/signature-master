@@ -9,7 +9,7 @@
     For the start of a release job: a desk that is off should fail the run before the build is
     spent, not after. Exits non-zero unless the desk answers GET /health with status "ok".
 
-        .\Test-SigningDesk.ps1 -Desk http://192.168.0.31:7443
+        .\Test-SigningDesk.ps1 -Desk http://192.0.2.10:7443
 
 .PARAMETER Desk
     The desk's address. Defaults to $env:SIGNING_DESK.

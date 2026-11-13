@@ -40,7 +40,7 @@ QJsonObject manifestFor(const QString& repository, const QString& ref, const QBy
         {QStringLiteral("run_id"), 1287},
         {QStringLiteral("run_url"),
          QStringLiteral("https://github.com/sigmastone-io/neurotrader/actions/runs/1287")},
-        {QStringLiteral("actor"), QStringLiteral("sorou")},
+        {QStringLiteral("actor"), QStringLiteral("octocat")},
         {QStringLiteral("files"),
          QJsonArray{
              QJsonObject{{QStringLiteral("name"), QStringLiteral("neurotrader-0.1.0-x64.msi")},

@@ -129,7 +129,7 @@ QString SigningTest::openRequest(const AuthResult& auth, const QList<QByteArray>
         {QStringLiteral("repository"), QStringLiteral("sigmastone-io/neurotrader")},
         {QStringLiteral("ref"), QStringLiteral("refs/tags/v0.1.0")},
         {QStringLiteral("commit"), QStringLiteral("abc123")},
-        {QStringLiteral("actor"), QStringLiteral("sorou")},
+        {QStringLiteral("actor"), QStringLiteral("octocat")},
         {QStringLiteral("files"), files},
     };
     const RequestStore::Reply reply = m_store->create(manifest, auth);
@@ -149,13 +149,13 @@ void SigningTest::manualApprovalSignsEveryFile() {
     QVERIFY(!id.isEmpty());
     QVERIFY(m_store->find(id)->state == RequestState::Pending);
 
-    QVERIFY(m_service->approve(id, QStringLiteral("sorou")));
+    QVERIFY(m_service->approve(id, QStringLiteral("octocat")));
     QVERIFY(m_store->find(id)->state == RequestState::Signing);
     QVERIFY(!m_service->approve(id, QStringLiteral("again")));
 
     QTRY_VERIFY(m_store->find(id)->state == RequestState::Signed);
     const SigningRequest request = *m_store->find(id);
-    QCOMPARE(request.approvedBy, QStringLiteral("sorou"));
+    QCOMPARE(request.approvedBy, QStringLiteral("octocat"));
     QCOMPARE(m_signer->signedPaths.size(), 2);
     for (const RequestFile& file : request.files) {
         QVERIFY(file.state == FileState::Signed);
@@ -170,7 +170,7 @@ void SigningTest::manualApprovalSignsEveryFile() {
     QCOMPARE(entries.size(), 2);
     for (const LogEntry& entry : entries) {
         QCOMPARE(entry.outcome, QStringLiteral("signed"));
-        QCOMPARE(entry.by, QStringLiteral("sorou"));
+        QCOMPARE(entry.by, QStringLiteral("octocat"));
         QCOMPARE(entry.requestId, id);
         QVERIFY(entry.file.startsWith(QStringLiteral("file-")));
         QCOMPARE(entry.sha256.size(), 64);
@@ -181,7 +181,7 @@ void SigningTest::aFailedFileFailsTheRequest() {
     m_signer->succeed = false;
     const QString id =
         openRequest(unverified(), {QByteArrayLiteral("one"), QByteArrayLiteral("two")});
-    QVERIFY(m_service->approve(id, QStringLiteral("sorou")));
+    QVERIFY(m_service->approve(id, QStringLiteral("octocat")));
     QTRY_VERIFY(m_store->find(id)->state == RequestState::Failed);
     const SigningRequest request = *m_store->find(id);
     QVERIFY(request.reason.contains(QStringLiteral("pretend")));

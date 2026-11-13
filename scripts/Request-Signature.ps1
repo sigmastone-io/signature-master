@@ -21,12 +21,12 @@
     that says why. Nothing is written over an original until every signed copy has been fetched
     and checked.
 
-        .\Request-Signature.ps1 -Desk http://192.168.0.31:7443 `
+        .\Request-Signature.ps1 -Desk http://192.0.2.10:7443 `
             -Files target\msi\neurotrader-0.1.0-x64.msi `
-            -Thumbprint 1f493506df74544240681e5831f3e05942520abf
+            -Thumbprint <sha1-thumbprint>
 
 .PARAMETER Desk
-    The desk's address, e.g. http://192.168.0.31:7443. Defaults to $env:SIGNING_DESK.
+    The desk's address, e.g. http://192.0.2.10:7443. Defaults to $env:SIGNING_DESK.
 
 .PARAMETER Files
     The files to sign. Each is replaced in place by its signed copy.

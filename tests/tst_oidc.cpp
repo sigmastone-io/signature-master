@@ -162,7 +162,7 @@ QJsonObject OidcTest::payload(const QByteArray& body) const {
         {QStringLiteral("ref"), QStringLiteral("refs/tags/v0.1.0")},
         {QStringLiteral("sha"), QStringLiteral("3b9d1e4f2c07")},
         {QStringLiteral("run_id"), QStringLiteral("1287")},
-        {QStringLiteral("actor"), QStringLiteral("sorou")},
+        {QStringLiteral("actor"), QStringLiteral("octocat")},
         {QStringLiteral("workflow_ref"),
          QStringLiteral("sigmastone-io/neurotrader/.github/workflows/rust.yml@refs/tags/v0.1.0")},
         {QStringLiteral("event_name"), QStringLiteral("push")},
@@ -186,7 +186,7 @@ void OidcTest::goodTokenPasses() {
     const AuthResult result = run(m_keys->sign(header(), payload(body)), body);
     QVERIFY2(result.outcome == CheckOutcome::Passed, qPrintable(result.detail));
     QCOMPARE(result.identity,
-             QStringLiteral("GitHub Actions, sigmastone-io/neurotrader run 1287 by sorou"));
+             QStringLiteral("GitHub Actions, sigmastone-io/neurotrader run 1287 by octocat"));
     QVERIFY(result.detail.contains(QStringLiteral("rust.yml")));
 }
 
