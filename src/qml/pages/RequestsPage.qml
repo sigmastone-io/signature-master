@@ -190,7 +190,7 @@ RowLayout {
 
                             Label {
                                 Layout.fillWidth: true
-                                text: row.negative ? row.stateLabel.toLowerCase() + ": " + row.reason : page.fileWord(row.fileCount) + " · " + row.actor + " · " + row.stateLabel.toLowerCase()
+                                text: row.negative ? row.stateLabel.toLowerCase() + ": " + row.reason : [page.fileWord(row.fileCount), row.actor, row.stateLabel.toLowerCase()].filter(part => part.length > 0).join(" · ")
                                 font.pixelSize: 12
                                 color: row.negative ? Theme.refused : Theme.muted
                                 elide: Text.ElideRight
@@ -311,7 +311,7 @@ RowLayout {
 
                         Label {
                             Layout.fillWidth: true
-                            text: page.request ? "Requested " + page.request.requestedAt.toLocaleString(Qt.locale(), "yyyy-MM-dd HH:mm") + " by <b>" + page.request.actor + "</b> from " + (page.request.runUrl.length > 0 ? "<a href=\"" + page.request.runUrl + "\">" : "") + page.request.workflow + (page.request.job.length > 0 ? " / " + page.request.job : "") + (page.request.runId.length > 0 ? ", run " + page.request.runId : "") + (page.request.runUrl.length > 0 ? "</a>" : "") : ""
+                            text: page.request ? "Requested " + page.request.requestedAt.toLocaleString(Qt.locale(), "yyyy-MM-dd HH:mm") + (page.request.actor.length > 0 ? " by <b>" + page.request.actor + "</b>" : "") + (page.request.workflow.length > 0 || page.request.runId.length > 0 ? " from " + (page.request.runUrl.length > 0 ? "<a href=\"" + page.request.runUrl + "\">" : "") + page.request.workflow + (page.request.job.length > 0 ? " / " + page.request.job : "") + (page.request.runId.length > 0 ? ", run " + page.request.runId : "") + (page.request.runUrl.length > 0 ? "</a>" : "") : " outside GitHub Actions") : ""
                             textFormat: Text.StyledText
                             wrapMode: Text.WordWrap
                             color: Theme.muted
@@ -622,7 +622,7 @@ RowLayout {
 
                     Label {
                         Layout.fillWidth: true
-                        text: page.request ? (page.request.state === "received" ? "Waiting for the job to upload " + page.fileWord(page.request.fileCount) + "." : page.request.stateLabel + (page.request.reason.length > 0 ? ": " + page.request.reason : "") + (page.request.approvedBy.length > 0 ? " (approved by " + page.request.approvedBy + ")" : "") + ", " + page.request.updatedAt.toLocaleString(Qt.locale(), "yyyy-MM-dd HH:mm")) : ""
+                        text: page.request ? (page.request.state === "received" ? "Waiting for the job to upload " + page.fileWord(page.request.fileCount) + "." : page.request.stateLabel + (page.request.reason.length > 0 ? ": " + page.request.reason : "") + (page.request.approvedBy.length > 0 ? (page.request.state === "rejected" ? " (rejected by " : " (approved by ") + page.request.approvedBy + ")" : "") + ", " + page.request.updatedAt.toLocaleString(Qt.locale(), "yyyy-MM-dd HH:mm")) : ""
                         wrapMode: Text.WordWrap
                         color: page.request && (page.request.state === "refused" || page.request.state === "rejected" || page.request.state === "failed") ? Theme.refused : Theme.muted
                     }
