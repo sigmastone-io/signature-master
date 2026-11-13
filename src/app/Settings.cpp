@@ -3,6 +3,8 @@
 
 #include "Settings.h"
 
+#include "DisplayPath.h"
+
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -129,7 +131,7 @@ Settings* Settings::create(QQmlEngine* qmlEngine, QJSEngine* jsEngine) {
 }
 
 QString Settings::filePath() const {
-    return QDir::toNativeSeparators(m_store.fileName());
+    return DisplayPath::of(m_store.fileName());
 }
 
 template <typename T>

@@ -11,6 +11,8 @@ set(sm_core_sources
     app/Authenticode.h
     app/CertificateStore.cpp
     app/CertificateStore.h
+    app/DisplayPath.cpp
+    app/DisplayPath.h
     app/FileVersion.cpp
     app/FileVersion.h
     app/Jwt.cpp

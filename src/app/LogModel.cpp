@@ -3,6 +3,8 @@
 
 #include "LogModel.h"
 
+#include "DisplayPath.h"
+
 #include <QFile>
 #include <QTextStream>
 
@@ -133,7 +135,7 @@ void LogModel::setSearch(const QString& search) {
 }
 
 QString LogModel::path() const {
-    return m_log->path();
+    return DisplayPath::of(m_log->path());
 }
 
 QString LogModel::exportCsv(const QUrl& file) const {

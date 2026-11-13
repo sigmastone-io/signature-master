@@ -104,8 +104,27 @@ Item {
                     Label {
                         Layout.fillWidth: true
                         Layout.leftMargin: 8
-                        text: "Saved as you change them, in " + Settings.filePath
-                        wrapMode: Text.WrapAnywhere
+                        Layout.bottomMargin: 8
+                        text: "Signature Master " + Qt.application.version + "<br>© 2026 <a href=\"https://sigmastone.io\">Sigmastone OÜ</a>"
+                        textFormat: Text.StyledText
+                        wrapMode: Text.Wrap
+                        color: Theme.subtle
+                        linkColor: Theme.accent
+                        font.pixelSize: 11
+                        onLinkActivated: link => Qt.openUrlExternally(link)
+
+                        HoverHandler {
+                            cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        }
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 8
+                        // A break opportunity after each separator, so the path wraps between
+                        // folder names rather than inside one.
+                        text: "Saved as you change them, in " + Settings.filePath.replace(/\\/g, "\\\u200B")
+                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         color: Theme.subtle
                         font.pixelSize: 11
                     }
