@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // The executable's icon and version resource. Configured by CMake from the project version;
-// the icon is packaging/windows/signature-master.ico.
+// the icon is packaging/windows/signature-master.ico. UTF-8, for the company's legal name.
+#pragma code_page(65001)
 #include <windows.h>
 
 IDI_ICON1 ICON "@SM_RC_ICON@"
@@ -20,14 +21,14 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Sigmastone"
+            VALUE "CompanyName", "Sigmastone OÜ"
             VALUE "FileDescription", "Signing desk for Sigmastone releases"
-            VALUE "FileVersion", "@PROJECT_VERSION@"
+            VALUE "FileVersion", "@SM_VERSION_FULL@"
             VALUE "InternalName", "signature-master"
-            VALUE "LegalCopyright", "Copyright Sigmastone"
+            VALUE "LegalCopyright", "Copyright © 2026 Sigmastone OÜ"
             VALUE "OriginalFilename", "signature-master.exe"
             VALUE "ProductName", "Signature Master"
-            VALUE "ProductVersion", "@PROJECT_VERSION@"
+            VALUE "ProductVersion", "@SM_VERSION_FULL@"
         END
     END
     BLOCK "VarFileInfo"

@@ -20,9 +20,11 @@
     carry a maintenance-fee EULA that is not accepted here).
 
 .PARAMETER Version
-    The product version. Defaults to the version in CMakeLists.txt. A pre-release suffix is kept
-    in the file name and stripped from the MSI's own ProductVersion, which Windows Installer
-    requires to be three numeric fields.
+    The product version, as a release tag carries it without the "v" (0.1.0, 0.1.0-rc.1).
+    Defaults to the version in CMakeLists.txt, and must start with it: CMake refuses anything
+    else. The whole of it goes into the build (SM_VERSION: what the application and its version
+    resource report) and into the file name; the MSI's own ProductVersion is its three numeric
+    fields, which is all Windows Installer accepts.
 
 .PARAMETER SkipBuild
     Package what build\release and build\stage already hold.
@@ -64,7 +66,7 @@ try {
         }
         if (-not $env:VCPKG_ROOT) { throw "VCPKG_ROOT is not set" }
 
-        cmake --preset release
+        cmake --preset release "-DSM_VERSION=$Version"
         if ($LASTEXITCODE -ne 0) { throw "cmake --preset release failed" }
         cmake --build --preset release
         if ($LASTEXITCODE -ne 0) { throw "The release build failed" }

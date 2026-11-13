@@ -9,6 +9,22 @@ project(SignatureMaster
     HOMEPAGE_URL "https://github.com/sigmastone-io/signature-master"
     LANGUAGES CXX)
 
+# The version the application, its version resource and the MSI report. A release build passes the
+# tag's version here (`-DSM_VERSION=0.2.0-rc.1`); it must start with the project version above, so
+# the tag and the source cannot disagree. Left empty, it is the project version.
+set(SM_VERSION "" CACHE STRING "Full version string, e.g. 0.2.0-rc.1; empty for the project version")
+if(SM_VERSION STREQUAL "")
+    set(SM_VERSION_FULL "${PROJECT_VERSION}")
+else()
+    string(REPLACE "." "\\." sm_version_pattern "${PROJECT_VERSION}")
+    if(NOT SM_VERSION MATCHES "^${sm_version_pattern}([-+][0-9A-Za-z.+-]+)?$")
+        message(FATAL_ERROR
+            "SM_VERSION '${SM_VERSION}' does not match the project version ${PROJECT_VERSION}")
+    endif()
+    set(SM_VERSION_FULL "${SM_VERSION}")
+endif()
+message(STATUS "Signature Master ${SM_VERSION_FULL}")
+
 if(WIN32)
     enable_language(RC) # the icon and version resource
 endif()

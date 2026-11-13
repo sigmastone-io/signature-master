@@ -105,7 +105,7 @@ target_include_directories(signature-master PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app)
 
 target_compile_definitions(signature-master PRIVATE
-    SM_VERSION="${PROJECT_VERSION}"
+    SM_VERSION="${SM_VERSION_FULL}"
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII
     QT_NO_KEYWORDS)
@@ -147,6 +147,17 @@ endif()
 # prefix, the same shape as the build tree; the MSI packages that tree. windeployqt is run here
 # directly rather than through Qt's deploy script, which insists on bin/ and Qt6/ subdirectories.
 install(TARGETS signature-master RUNTIME DESTINATION .)
+# The licences that travel with the binaries: this project's, and the copyright file vcpkg keeps
+# for every library it built, Qt's among them, under licenses/.
+install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION . RENAME LICENSE.txt)
+if(DEFINED VCPKG_INSTALLED_DIR)
+    file(GLOB sm_copyrights "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/*/copyright")
+    foreach(file IN LISTS sm_copyrights)
+        get_filename_component(port_dir "${file}" DIRECTORY)
+        get_filename_component(port "${port_dir}" NAME)
+        install(FILES "${file}" DESTINATION licenses RENAME "${port}.txt")
+    endforeach()
+endif()
 if(WIN32)
     install(CODE "
         execute_process(

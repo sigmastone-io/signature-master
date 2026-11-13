@@ -24,7 +24,8 @@
 
   <Package
       Name="Signature Master"
-      Manufacturer="Sigmastone"
+      Manufacturer="Sigmastone OÜ"
+      Codepage="1252"
       Version="$(var.Version)"
       UpgradeCode="2c3f5b2a-7d2e-4c7a-9b6d-1f0e8a4c9d31"
       Scope="perMachine"
@@ -42,6 +43,8 @@
     <Icon Id="SignatureMasterIcon" SourceFile="$(var.IconFile)" />
     <Property Id="ARPPRODUCTICON" Value="SignatureMasterIcon" />
     <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPURLINFOABOUT" Value="https://sigmastone.io" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/sigmastone-io/signature-master" />
 
     <!-- The desk lives in the tray; an upgrade or removal has to close it first, or Windows
          Installer finds the executable in use and asks for a restart. -->
