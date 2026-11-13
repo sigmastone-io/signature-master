@@ -1,0 +1,140 @@
+# SPDX-FileCopyrightText: 2026 Sigmastone OÜ
+# SPDX-License-Identifier: Apache-2.0
+
+name: Build
+
+# Builds and tests the desk on every push to dev and every pull request into it, on the
+# organization's self-hosted Windows runner. A `v*` tag also builds the MSI and, when the tagged
+# commit is contained in dev, publishes it as a GitHub Release with its SHA-256 checksum; a tag with
+# a pre-release suffix (v0.1.0-rc.1) makes a pre-release. A manual run builds the MSI and keeps it
+# as a workflow artifact without publishing anything. ci/release-plan.sh decides which.
+#
+# The MSI is not Authenticode-signed yet; the run and the release notes say so.
+
+on:
+  push:
+    branches: [ "dev" ]
+    tags: [ "v*" ]
+    # GitHub does not evaluate path filters on a tag push, so a version tag always builds.
+    paths-ignore: [ "doc/**", "**.md" ]
+  pull_request:
+    branches: [ "dev" ]
+    paths-ignore: [ "doc/**", "**.md" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One build of this repository at a time: the runner's vcpkg checkout, whose build trees are
+# shared, is not safe for two jobs building the same port at once.
+concurrency:
+  group: windows-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and test
+    # A pull request from a fork never reaches the self-hosted runner, which is persistent and runs
+    # jobs as LocalSystem. Such a pull request is built once a maintainer pushes it to a branch here.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    runs-on: [ self-hosted, Windows, X64, msvc, wix ]
+    # The first run on a runner builds Qt from source; later runs restore it from the binary cache.
+    timeout-minutes: 240
+
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      release: ${{ steps.plan.outputs.release }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      tag: ${{ steps.plan.outputs.tag }}
+
+    steps:
+    # Full history, because deciding whether a tag is a release means asking whether its commit is
+    # contained in dev.
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    - name: Decide what this run is
+      id: plan
+      shell: bash
+      run: bash ci/release-plan.sh
+
+    - name: Set up vcpkg
+      shell: pwsh
+      run: ./ci/Initialize-Vcpkg.ps1
+
+    - name: Build and test
+      shell: pwsh
+      run: ./ci/Build.ps1 -Version '${{ steps.plan.outputs.version }}'
+
+    - name: Build the MSI
+      if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      shell: pwsh
+      run: |
+        ./packaging/windows/build-msi.ps1 -Version '${{ steps.plan.outputs.version }}'
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        $msi = Get-Item 'build\msi\signature-master-${{ steps.plan.outputs.version }}-x64.msi'
+        $hash = (Get-FileHash $msi.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        # sha256sum's format, so `sha256sum -c` checks it as well as Get-FileHash does.
+        [IO.File]::WriteAllText("$($msi.FullName).sha256", "$hash  $($msi.Name)`n")
+        Write-Host "$hash  $($msi.Name)"
+
+    - name: Note that the MSI is not signed
+      if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      shell: pwsh
+      run: Write-Host '::warning::The MSI is not Authenticode-signed; the release notes say so.'
+
+    - uses: actions/upload-artifact@v4
+      if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      with:
+        name: signature-master-${{ steps.plan.outputs.version }}-windows-x64
+        path: |
+          build/msi/*.msi
+          build/msi/*.msi.sha256
+        if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    needs: build
+    if: needs.build.outputs.release == 'true'
+
+    runs-on: [ self-hosted, Linux, X64 ]
+    timeout-minutes: 10
+
+    permissions:
+      contents: write   # `gh release create`
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        path: dist
+        merge-multiple: true
+
+    - name: Publish the GitHub Release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.build.outputs.tag }}
+        VERSION: ${{ needs.build.outputs.version }}
+        PRERELEASE: ${{ needs.build.outputs.prerelease }}
+      run: |
+        set -euo pipefail
+        msi="signature-master-$VERSION-x64.msi"
+        cat > notes.md <<NOTES
+        Signature Master $VERSION for Windows 10 and 11, x64.
+
+        **The MSI is not code-signed.** Windows SmartScreen warns when it is opened ("Windows
+        protected your PC"; More info, Run anyway). Check the download against the checksum
+        attached beside it before running it:
+
+        \`\`\`powershell
+        (Get-FileHash .\\$msi -Algorithm SHA256).Hash
+        Get-Content .\\$msi.sha256
+        \`\`\`
+
+        The two must match, ignoring case.
+        NOTES
+        flags=(--title "Signature Master $TAG" --notes-file notes.md --generate-notes)
+        if [[ "$PRERELEASE" == "true" ]]; then flags+=(--prerelease); fi
+        find dist -type f | sort
+        gh release create "$TAG" "${flags[@]}" --repo "$GITHUB_REPOSITORY" dist/*
