@@ -62,7 +62,11 @@ try {
             $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
             $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
             if (-not $vs) { throw "No Visual Studio with the C++ tools was found" }
+            # The developer shell points VCPKG_ROOT at the copy of vcpkg inside Visual Studio,
+            # which is read-only under Program Files; the caller's vcpkg is the one to use.
+            $vcpkgRoot = $env:VCPKG_ROOT
             & (Join-Path $vs "Common7\Tools\Launch-VsDevShell.ps1") -Arch amd64 -SkipAutomaticLocation | Out-Null
+            if ($vcpkgRoot) { $env:VCPKG_ROOT = $vcpkgRoot }
         }
         if (-not $env:VCPKG_ROOT) { throw "VCPKG_ROOT is not set" }
 
