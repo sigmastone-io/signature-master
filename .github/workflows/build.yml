@@ -93,6 +93,8 @@ jobs:
           build/msi/*.msi
           build/msi/*.msi.sha256
         if-no-files-found: error
+        # Read by the release job of this run; the GitHub Release is the lasting copy.
+        retention-days: 1
 
   release:
     name: GitHub Release
