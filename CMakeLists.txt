@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(SignatureMaster
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "Signing desk for Sigmastone releases"
     HOMEPAGE_URL "https://github.com/sigmastone-io/signature-master"
     LANGUAGES CXX)
