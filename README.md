@@ -71,8 +71,10 @@ More pictures: [doc/screenshots.md](doc/screenshots.md).
   session is open (see [Using Certum SimplySign](#using-certum-simplysign)).
 - The issuing CA's intermediate certificate in `Cert:\CurrentUser\CA`, so that `signtool` puts it
   in every signature and a machine that lacks it can still build the chain.
-- A network path from the release job's runner to the desk (TCP 7443 by default). The API is plain
-  HTTP and meant for a LAN; see [Security model](#security-model).
+- A network path from the release job's runner to the desk: the LAN (TCP 7443 by default), or a
+  tunnel that gives the desk an HTTPS address when the runners are elsewhere (see
+  [Reaching the desk from elsewhere](#reaching-the-desk-from-elsewhere)). The desk itself speaks
+  plain HTTP; see [Security model](#security-model).
 
 ## Install
 
@@ -131,7 +133,7 @@ jobs:
       - name: Sign
         shell: pwsh
         env:
-          SIGNING_DESK: http://192.0.2.10:7443
+          SIGNING_DESK: ${{ vars.SIGNING_DESK }}       # http://192.0.2.10:7443 or https://sign.example.com
           SIGNING_THUMBPRINT: ${{ vars.SIGNING_THUMBPRINT }}
         run: |
           ./scripts/Test-SigningDesk.ps1
@@ -167,13 +169,33 @@ The routes, the manifest, the request and its states are in
   the timestamp before it replaces anything.
 - **Everything is recorded.** The signature log is append-only JSON lines in
   `%LOCALAPPDATA%\Sigmastone\SignatureMaster\signatures.log`.
-- **Plain HTTP, on purpose limited to the LAN.** The token binding means a request cannot be
-  altered in flight without being refused, but the files travel unencrypted; keep the desk off
-  the Internet.
+- **Plain HTTP at the desk; TLS is the tunnel's.** The token binding means a request cannot be
+  altered in flight without being refused, but on the LAN the files travel unencrypted. Never
+  forward a port to the desk; to reach it from elsewhere, put a tunnel in front that terminates
+  TLS and forwards to the desk on the same machine.
+- **Reachable from outside means anyone may ask.** Requests from strangers are refused when they
+  fail the owner, repository or ref rules, and listed as unverified when they carry no token;
+  only a person approves an unverified request. Set the allow lists before exposing the desk.
 - **The PIN or login.** A card's own dialog asks for its PIN, and a cloud client asks for its own
   login; the desk sees neither. Keeping a card's PIN in Windows Credential Manager, so automatic
   signing can run unattended with a card, is planned and not built; its setting is disabled. It
   has nothing to keep with SimplySign, whose login is a one-time token.
+
+## Reaching the desk from elsewhere
+
+When the release runners are not on the desk's network, give the desk an HTTPS address through a
+tunnel that dials out from the desk's machine, so nothing listens on the Internet and no router
+or firewall changes. With Cloudflare Tunnel, for example:
+
+1. Create a tunnel and a public hostname for it in a zone on the account, with the service
+   `http://127.0.0.1:7443`.
+2. Install `cloudflared` on the desk's machine and run the tunnel as a Windows service
+   (`cloudflared service install <token>` from an elevated shell).
+3. Check from anywhere: `.\scripts\Test-SigningDesk.ps1 -Desk https://sign.example.com`.
+4. Give the release jobs that address as `SIGNING_DESK`.
+
+With the tunnel on the same machine the desk can listen on `127.0.0.1` alone. Cloudflare's free
+plan caps a request body at 100 MB, which is the largest file the desk can take through it.
 
 ## Using Certum SimplySign
 

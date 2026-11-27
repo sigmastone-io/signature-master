@@ -9,7 +9,11 @@ name: Build
 # a pre-release suffix (v0.1.0-rc.1) makes a pre-release. A manual run builds the MSI and keeps it
 # as a workflow artifact without publishing anything. ci/release-plan.sh decides which.
 #
-# The MSI is not Authenticode-signed yet; the run and the release notes say so.
+# A tag run has its MSI Authenticode-signed by a signing desk (this application, running where the
+# certificate is) before anything is published: scripts/Request-Signature.ps1 sends it with the
+# run's GitHub Actions OIDC token and puts the signed copy in its place. Two repository variables
+# say where and with what: SIGNING_DESK (the desk's address) and SIGNING_THUMBPRINT (the SHA-1
+# thumbprint the signature must carry). A manual run's MSI stays unsigned and the run says so.
 
 on:
   push:
@@ -42,6 +46,10 @@ jobs:
     # The first run on a runner builds Qt from source; later runs restore it from the binary cache.
     timeout-minutes: 240
 
+    permissions:
+      contents: read
+      id-token: write   # the OIDC token a tag run proves itself to the signing desk with
+
     outputs:
       version: ${{ steps.plan.outputs.version }}
       release: ${{ steps.plan.outputs.release }}
@@ -60,6 +68,17 @@ jobs:
       shell: bash
       run: bash ci/release-plan.sh
 
+    # A desk that is off fails a tag run here, before the build is spent.
+    - name: Check the signing desk
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: pwsh
+      env:
+        SIGNING_DESK: ${{ vars.SIGNING_DESK }}
+      run: |
+        if (-not $env:SIGNING_DESK) { throw 'The repository variable SIGNING_DESK is not set' }
+        if (-not '${{ vars.SIGNING_THUMBPRINT }}') { throw 'The repository variable SIGNING_THUMBPRINT is not set' }
+        ./scripts/Test-SigningDesk.ps1
+
     - name: Set up vcpkg
       shell: pwsh
       run: ./ci/Initialize-Vcpkg.ps1
@@ -74,16 +93,33 @@ jobs:
       run: |
         ./packaging/windows/build-msi.ps1 -Version '${{ steps.plan.outputs.version }}'
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+    # The desk signs automatically when it is set to and every check passes; otherwise a person
+    # approves at the desk while this step waits (Request-Signature.ps1's timeout).
+    - name: Sign the MSI
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: pwsh
+      env:
+        SIGNING_DESK: ${{ vars.SIGNING_DESK }}
+        SIGNING_THUMBPRINT: ${{ vars.SIGNING_THUMBPRINT }}
+      run: |
+        ./scripts/Request-Signature.ps1 -Files 'build\msi\signature-master-${{ steps.plan.outputs.version }}-x64.msi'
+
+    - name: Note that the MSI is not signed
+      if: github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/v')
+      shell: pwsh
+      run: Write-Host '::warning::A manual run does not sign; this MSI is not Authenticode-signed.'
+
+    # After signing, so the checksum is of the file that is published.
+    - name: Write the checksum
+      if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      shell: pwsh
+      run: |
         $msi = Get-Item 'build\msi\signature-master-${{ steps.plan.outputs.version }}-x64.msi'
         $hash = (Get-FileHash $msi.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
         # sha256sum's format, so `sha256sum -c` checks it as well as Get-FileHash does.
         [IO.File]::WriteAllText("$($msi.FullName).sha256", "$hash  $($msi.Name)`n")
         Write-Host "$hash  $($msi.Name)"
-
-    - name: Note that the MSI is not signed
-      if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-      shell: pwsh
-      run: Write-Host '::warning::The MSI is not Authenticode-signed; the release notes say so.'
 
     - uses: actions/upload-artifact@v4
       if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
@@ -125,9 +161,10 @@ jobs:
         cat > notes.md <<NOTES
         Signature Master $VERSION for Windows 10 and 11, x64.
 
-        **The MSI is not code-signed.** Windows SmartScreen warns when it is opened ("Windows
-        protected your PC"; More info, Run anyway). Check the download against the checksum
-        attached beside it before running it:
+        The MSI is Authenticode-signed; its Digital Signatures tab names the publisher. Until the
+        publisher has built up reputation, Windows SmartScreen may still warn when it is opened
+        ("Windows protected your PC"; More info shows the publisher). The checksum attached beside
+        it is for checking the download:
 
         \`\`\`powershell
         (Get-FileHash .\\$msi -Algorithm SHA256).Hash
