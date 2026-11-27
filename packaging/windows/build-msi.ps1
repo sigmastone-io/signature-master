@@ -28,12 +28,18 @@
 
 .PARAMETER SkipBuild
     Package what build\release and build\stage already hold.
+
+.PARAMETER StageOnly
+    Build and stage, and stop before packaging. With -SkipBuild after it, this is how a release
+    signs build\stage\signature-master.exe between the two: the MSI carries the staged files as
+    they are, so a signature made there is the one that ships.
 #>
 
 [CmdletBinding()]
 param(
     [string] $Version,
     [switch] $SkipBuild,
+    [switch] $StageOnly,
     [string] $WixVersion = "5.0.2"
 )
 
@@ -79,8 +85,13 @@ try {
         cmake --install build\release --prefix $stage
         if ($LASTEXITCODE -ne 0) { throw "cmake --install failed" }
     }
-    if (-not (Test-Path (Join-Path $stage "signature-master.exe"))) {
+    $exe = Join-Path $stage "signature-master.exe"
+    if (-not (Test-Path $exe)) {
         throw "No executable in '$stage'"
+    }
+    if ($StageOnly) {
+        Write-Host "Staged $stage"
+        return
     }
 
     $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
