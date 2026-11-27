@@ -72,14 +72,10 @@ void Settings::load() {
     m_pauseListening = m_store.value(QLatin1String(kPauseListening), false).toBool();
     m_workDirectory =
         m_store.value(QLatin1String(kWorkDirectory), defaultWorkDirectory()).toString();
-    m_allowedOwner =
-        m_store.value(QLatin1String(kAllowedOwner), QStringLiteral("sigmastone-io")).toString();
-    m_allowedRepositories = m_store
-                                .value(QLatin1String(kAllowedRepositories),
-                                       QStringList{QStringLiteral("neurotrader"),
-                                                   QStringLiteral("neurotrader-gui"),
-                                                   QStringLiteral("neurotrader-installer")})
-                                .toStringList();
+    // No owner and no repositories by default: the desk is not anybody's in particular. Until they
+    // are set, those checks are unverified, so a person can approve and nothing signs on its own.
+    m_allowedOwner = m_store.value(QLatin1String(kAllowedOwner)).toString();
+    m_allowedRepositories = m_store.value(QLatin1String(kAllowedRepositories)).toStringList();
     m_allowedRefs =
         m_store.value(QLatin1String(kAllowedRefs), QStringLiteral("refs/tags/v*")).toString();
     m_dismissedNotices = m_store.value(QLatin1String(kDismissedNotices)).toStringList();

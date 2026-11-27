@@ -43,8 +43,10 @@ thumbprint, and the card's middleware or the cloud signing client does the rest.
   and its `repository`, `ref`, `sha` and `run_id` must match the manifest. A request without a
   token is listed as *unverified*: a person can still approve it, it is never signed
   automatically.
-- **Allow lists** for the owner, the repositories and the refs (`refs/tags/v*` by default) that
-  may ask.
+- **Allow lists** for the owner, the repositories and the refs that may ask. None names an owner
+  or a repository out of the box; until they are set, those checks are unverified, so a person
+  can approve a request and nothing is signed automatically. The ref pattern starts as
+  `refs/tags/v*`.
 - **Signing with `signtool`**: SHA-256 digests, an RFC 3161 timestamp, a check that the signed copy
   carries the chosen certificate, and `signtool verify /pa` for a publicly trusted certificate.
 - **Automatic signing**, off by default, for verified requests whose every check passed.
@@ -97,7 +99,7 @@ Get-Content .\signature-master-0.1.0-x64.msi.sha256
    (`CN=Sigmastone Test Signing`, three months). It is trusted by nobody: never publish anything
    signed with it.
 3. In **Settings, Who may ask**, set the GitHub owner, the repositories and the ref pattern that may
-   send requests.
+   send requests. Automatic signing needs all three set.
 4. In **Settings, Listening**, check the address and port (`0.0.0.0:7443`), and allow the desk
    through Windows Firewall when Windows asks.
 5. From another machine, check that the desk answers:

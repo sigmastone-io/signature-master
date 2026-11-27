@@ -131,30 +131,58 @@ RequestStore::Reply RequestStore::create(const QJsonObject& manifest, const Auth
                            auth.outcome,
                            auth.detail});
 
+    // An allow list that is not set is no opinion: its check is unverified, which leaves the
+    // request to a person and keeps it from being signed automatically.
     const QString owner = m_settings->allowedOwner();
-    request.checks.append({QLatin1String(kOwner),
-                           QStringLiteral("Owner is %1").arg(owner),
-                           request.owner() == owner ? CheckOutcome::Passed : CheckOutcome::Failed,
-                           request.owner() == owner
-                               ? QString()
-                               : QStringLiteral("owner %1 is not %2").arg(request.owner(), owner)});
+    if (owner.isEmpty()) {
+        request.checks.append({QLatin1String(kOwner),
+                               QStringLiteral("Owner is allowed"),
+                               CheckOutcome::Unverified,
+                               QStringLiteral("no allowed owner is set in Settings")});
+    } else {
+        const bool ownerAllowed = request.owner() == owner;
+        request.checks.append(
+            {QLatin1String(kOwner),
+             QStringLiteral("Owner is %1").arg(owner),
+             ownerAllowed ? CheckOutcome::Passed : CheckOutcome::Failed,
+             ownerAllowed ? QString()
+                          : QStringLiteral("owner %1 is not %2").arg(request.owner(), owner)});
+    }
 
-    const bool repositoryAllowed = m_settings->allowedRepositories().contains(request.name());
-    request.checks.append(
-        {QLatin1String(kRepository),
-         QStringLiteral("Repository is on the allow list"),
-         repositoryAllowed ? CheckOutcome::Passed : CheckOutcome::Failed,
-         repositoryAllowed ? QString()
-                           : QStringLiteral("%1 is not on the allow list").arg(request.name())});
+    const QStringList repositories = m_settings->allowedRepositories();
+    if (repositories.isEmpty()) {
+        request.checks.append({QLatin1String(kRepository),
+                               QStringLiteral("Repository is on the allow list"),
+                               CheckOutcome::Unverified,
+                               QStringLiteral("no repositories are allowed in Settings yet")});
+    } else {
+        const bool repositoryAllowed = repositories.contains(request.name());
+        request.checks.append(
+            {QLatin1String(kRepository),
+             QStringLiteral("Repository is on the allow list"),
+             repositoryAllowed ? CheckOutcome::Passed : CheckOutcome::Failed,
+             repositoryAllowed
+                 ? QString()
+                 : QStringLiteral("%1 is not on the allow list").arg(request.name())});
+    }
 
     const QString pattern = m_settings->allowedRefs();
-    const QRegularExpression refPattern(QRegularExpression::wildcardToRegularExpression(pattern));
-    const bool refAllowed = refPattern.match(request.ref).hasMatch();
-    request.checks.append(
-        {QLatin1String(kRef),
-         QStringLiteral("Ref matches %1").arg(pattern),
-         refAllowed ? CheckOutcome::Passed : CheckOutcome::Failed,
-         refAllowed ? QString() : QStringLiteral("ref is not a release tag (%1)").arg(pattern)});
+    if (pattern.isEmpty()) {
+        request.checks.append({QLatin1String(kRef),
+                               QStringLiteral("Ref is allowed"),
+                               CheckOutcome::Unverified,
+                               QStringLiteral("no ref pattern is set in Settings")});
+    } else {
+        const QRegularExpression refPattern(
+            QRegularExpression::wildcardToRegularExpression(pattern));
+        const bool refAllowed = refPattern.match(request.ref).hasMatch();
+        request.checks.append(
+            {QLatin1String(kRef),
+             QStringLiteral("Ref matches %1").arg(pattern),
+             refAllowed ? CheckOutcome::Passed : CheckOutcome::Failed,
+             refAllowed ? QString()
+                        : QStringLiteral("ref %1 does not match %2").arg(request.ref, pattern)});
+    }
 
     const CertificateInfo certificate = m_certificateProbe();
     const bool certificateUsable =

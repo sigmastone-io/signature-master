@@ -4,8 +4,7 @@
 #
 # What a run of the build workflow is, decided once and read by every step after it. Run under
 # `shell: bash` from the repository root, with GITHUB_REF, GITHUB_SHA and GITHUB_OUTPUT set as
-# Actions sets them. The same rules as the engine's packaging (sigmastone-io/neurotrader,
-# ci/release-plan.sh):
+# Actions sets them:
 #
 #   - A `v*` tag. The MSI is built, and if the tagged commit is contained in `dev` - this
 #     repository's main branch - it is published as a GitHub Release. A tag with a pre-release

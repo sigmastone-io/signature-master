@@ -127,8 +127,10 @@ AuthResult GitHubOidcAuthenticator::authenticate(const QByteArray& bearer,
     }
 
     // What the token says must be what the manifest says.
+    // With no allowed owner set, the owner check in the request store is unverified instead, and
+    // the repository claim below still has to match the manifest.
     const QString owner = m_settings->allowedOwner();
-    if (claim(payload, "repository_owner") != owner) {
+    if (!owner.isEmpty() && claim(payload, "repository_owner") != owner) {
         return failed(QStringLiteral("the token belongs to %1, not to %2")
                           .arg(claim(payload, "repository_owner"), owner));
     }

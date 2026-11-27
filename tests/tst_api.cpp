@@ -39,11 +39,11 @@ QJsonObject manifestFor(const QString& repository, const QString& ref, const QBy
         {QStringLiteral("job"), QStringLiteral("package")},
         {QStringLiteral("run_id"), 1287},
         {QStringLiteral("run_url"),
-         QStringLiteral("https://github.com/sigmastone-io/neurotrader/actions/runs/1287")},
+         QStringLiteral("https://github.com/example-org/example-app/actions/runs/1287")},
         {QStringLiteral("actor"), QStringLiteral("octocat")},
         {QStringLiteral("files"),
          QJsonArray{
-             QJsonObject{{QStringLiteral("name"), QStringLiteral("neurotrader-0.1.0-x64.msi")},
+             QJsonObject{{QStringLiteral("name"), QStringLiteral("example-app-0.1.0-x64.msi")},
                          {QStringLiteral("size"), bytes.size()},
                          {QStringLiteral("sha256"), digest}}}},
     };
@@ -89,6 +89,8 @@ void ApiTest::initTestCase() {
 void ApiTest::init() {
     m_settings = std::make_unique<Settings>(m_dir.filePath(QStringLiteral("settings.ini")));
     m_settings->setWorkDirectory(m_dir.filePath(QStringLiteral("work")));
+    m_settings->setAllowedOwner(QStringLiteral("example-org"));
+    m_settings->setAllowedRepositories({QStringLiteral("example-app")});
     m_store = std::make_unique<RequestStore>(m_settings.get());
     m_store->setCertificateProbe([] {
         CertificateInfo info;
@@ -134,7 +136,7 @@ HttpReply ApiTest::call(const QByteArray& verb, const QString& path, const QByte
 
 QString ApiTest::createGoodRequest(const QByteArray& bytes) {
     const QJsonObject manifest = manifestFor(
-        QStringLiteral("sigmastone-io/neurotrader"), QStringLiteral("refs/tags/v0.1.0"), bytes);
+        QStringLiteral("example-org/example-app"), QStringLiteral("refs/tags/v0.1.0"), bytes);
     const HttpReply reply =
         call("POST", QStringLiteral("/requests"), QJsonDocument(manifest).toJson());
     if (reply.status != 201) {
@@ -152,7 +154,7 @@ void ApiTest::healthAnswers() {
 
 void ApiTest::malformedManifestIsNotListed() {
     QJsonObject manifest = manifestFor(
-        QStringLiteral("sigmastone-io/neurotrader"), QStringLiteral("refs/tags/v0.1.0"), m_payload);
+        QStringLiteral("example-org/example-app"), QStringLiteral("refs/tags/v0.1.0"), m_payload);
     manifest.remove(QStringLiteral("files"));
     const HttpReply reply =
         call("POST", QStringLiteral("/requests"), QJsonDocument(manifest).toJson());
@@ -166,7 +168,7 @@ void ApiTest::malformedManifestIsNotListed() {
 
 void ApiTest::unknownOwnerIsRefusedAndListed() {
     const QJsonObject manifest = manifestFor(
-        QStringLiteral("someone-else/neurotrader"), QStringLiteral("refs/tags/v0.1.0"), m_payload);
+        QStringLiteral("someone-else/example-app"), QStringLiteral("refs/tags/v0.1.0"), m_payload);
     const HttpReply reply =
         call("POST", QStringLiteral("/requests"), QJsonDocument(manifest).toJson());
     QCOMPARE(reply.status, 403);
@@ -178,7 +180,7 @@ void ApiTest::unknownOwnerIsRefusedAndListed() {
     // A refused request takes no files.
     const QString id = reply.body.value(QStringLiteral("id")).toString();
     const HttpReply put = call(
-        "PUT", QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi").arg(id), m_payload);
+        "PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), m_payload);
     QCOMPARE(put.status, 409);
 }
 
@@ -193,7 +195,7 @@ void ApiTest::goodRequestBecomesPendingAfterUpload() {
     QCOMPARE(m_store->pendingCount(), 0);
 
     const HttpReply put = call(
-        "PUT", QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi").arg(id), m_payload);
+        "PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), m_payload);
     QCOMPARE(put.status, 200);
     QCOMPARE(put.body.value(QStringLiteral("state")).toString(), QStringLiteral("pending"));
     QCOMPARE(m_store->pendingCount(), 1);
@@ -220,12 +222,12 @@ void ApiTest::goodRequestBecomesPendingAfterUpload() {
 
     // Nothing signed yet.
     const HttpReply signedFile =
-        call("GET", QStringLiteral("/requests/%1/signed/neurotrader-0.1.0-x64.msi").arg(id));
+        call("GET", QStringLiteral("/requests/%1/signed/example-app-0.1.0-x64.msi").arg(id));
     QCOMPARE(signedFile.status, 404);
 
     // A second upload of the same file is refused.
     const HttpReply again = call(
-        "PUT", QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi").arg(id), m_payload);
+        "PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), m_payload);
     QCOMPARE(again.status, 409);
 }
 
@@ -235,7 +237,7 @@ void ApiTest::wrongHashRefusesTheRequest() {
     QByteArray tampered = m_payload;
     tampered[0] = 'X';
     const HttpReply put = call(
-        "PUT", QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi").arg(id), tampered);
+        "PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), tampered);
     QCOMPARE(put.status, 400);
     QCOMPARE(put.body.value(QStringLiteral("state")).toString(), QStringLiteral("refused"));
     QVERIFY(
@@ -247,7 +249,7 @@ void ApiTest::wrongHashRefusesTheRequest() {
     QVERIFY(!QDir(request->workDir).exists());
 
     const HttpReply shortOne = call("PUT",
-                                    QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi")
+                                    QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi")
                                         .arg(createGoodRequest(m_payload)),
                                     m_payload.left(5));
     QCOMPARE(shortOne.status, 400);
@@ -266,7 +268,7 @@ void ApiTest::unknownFileNameIsRejected() {
 
 void ApiTest::cancelExpiresThePendingRequest() {
     const QString id = createGoodRequest(m_payload);
-    call("PUT", QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi").arg(id), m_payload);
+    call("PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), m_payload);
     const HttpReply gone = call("DELETE", QStringLiteral("/requests/%1").arg(id));
     QCOMPARE(gone.status, 200);
     QCOMPARE(gone.body.value(QStringLiteral("state")).toString(), QStringLiteral("expired"));
@@ -280,7 +282,7 @@ void ApiTest::cancelExpiresThePendingRequest() {
 void ApiTest::rejectFromTheWindow() {
     const QString id = createGoodRequest(m_payload);
     QVERIFY(!m_store->reject(id, QStringLiteral("too early")));
-    call("PUT", QStringLiteral("/requests/%1/files/neurotrader-0.1.0-x64.msi").arg(id), m_payload);
+    call("PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), m_payload);
     QVERIFY(m_store->reject(id, QStringLiteral("wrong tag, retagging")));
     const HttpReply state = call("GET", QStringLiteral("/requests/%1").arg(id));
     QCOMPARE(state.body.value(QStringLiteral("state")).toString(), QStringLiteral("rejected"));

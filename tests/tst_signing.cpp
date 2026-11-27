@@ -64,6 +64,7 @@ private Q_SLOTS:
     void manualApprovalSignsEveryFile();
     void aFailedFileFailsTheRequest();
     void automaticSigningNeedsEveryCheckPassed();
+    void unsetAllowListsKeepAutomaticSigningOff();
     void rejectionAndRefusalAreLogged();
     void logRoundTrips();
 
@@ -85,6 +86,8 @@ void SigningTest::init() {
     m_settings = std::make_unique<Settings>(m_dir.filePath(QStringLiteral("settings.ini")));
     m_settings->setWorkDirectory(m_dir.filePath(QStringLiteral("work")));
     m_settings->setAutoSign(false);
+    m_settings->setAllowedOwner(QStringLiteral("example-org"));
+    m_settings->setAllowedRepositories({QStringLiteral("example-app")});
     QFile::remove(m_dir.filePath(QStringLiteral("signatures.log")));
     m_log = std::make_unique<SignatureLog>(m_dir.filePath(QStringLiteral("signatures.log")));
     m_store = std::make_unique<RequestStore>(m_settings.get());
@@ -126,7 +129,7 @@ QString SigningTest::openRequest(const AuthResult& auth, const QList<QByteArray>
                                  {QStringLiteral("sha256"), sha256(payloads.at(i))}});
     }
     const QJsonObject manifest{
-        {QStringLiteral("repository"), QStringLiteral("sigmastone-io/neurotrader")},
+        {QStringLiteral("repository"), QStringLiteral("example-org/example-app")},
         {QStringLiteral("ref"), QStringLiteral("refs/tags/v0.1.0")},
         {QStringLiteral("commit"), QStringLiteral("abc123")},
         {QStringLiteral("actor"), QStringLiteral("octocat")},
@@ -219,6 +222,25 @@ void SigningTest::automaticSigningNeedsEveryCheckPassed() {
     QVERIFY(m_store->find(manual)->state == RequestState::Pending);
 }
 
+void SigningTest::unsetAllowListsKeepAutomaticSigningOff() {
+    m_settings->setAutoSign(true);
+    m_settings->setAllowedOwner(QString());
+    m_settings->setAllowedRepositories({});
+
+    // Verified caller, but nobody said which owner and repositories are trusted: a person decides.
+    const QString id = openRequest(verified(), {QByteArrayLiteral("one")});
+    QVERIFY(m_store->find(id)->state == RequestState::Pending);
+    QVERIFY(m_store->find(id)->anyCheckUnverified());
+    QVERIFY(m_store->find(id)->check(QStringLiteral("owner"))->outcome == CheckOutcome::Unverified);
+    QVERIFY(m_store->find(id)->check(QStringLiteral("repository"))->outcome ==
+            CheckOutcome::Unverified);
+    QTest::qWait(20);
+    QVERIFY(m_store->find(id)->state == RequestState::Pending);
+
+    QVERIFY(m_service->approve(id, QStringLiteral("tester")));
+    QTRY_VERIFY(m_store->find(id)->state == RequestState::Signed);
+}
+
 void SigningTest::rejectionAndRefusalAreLogged() {
     const QString id = openRequest(unverified(), {QByteArrayLiteral("one")});
     QVERIFY(m_store->reject(id, QStringLiteral("wrong tag")));
@@ -229,7 +251,7 @@ void SigningTest::rejectionAndRefusalAreLogged() {
     QVERIFY(!entries.first().by.isEmpty());
 
     const QJsonObject bad{
-        {QStringLiteral("repository"), QStringLiteral("someone/neurotrader")},
+        {QStringLiteral("repository"), QStringLiteral("someone/example-app")},
         {QStringLiteral("ref"), QStringLiteral("refs/tags/v0.1.0")},
         {QStringLiteral("files"),
          QJsonArray{QJsonObject{{QStringLiteral("name"), QStringLiteral("x.msi")},
@@ -254,7 +276,7 @@ void SigningTest::logRoundTrips() {
     LogEntry entry;
     entry.time = QDateTime(QDate(2026, 12, 10), QTime(14, 9, 41, 250), QTimeZone::UTC);
     entry.requestId = QStringLiteral("id");
-    entry.repository = QStringLiteral("sigmastone-io/neurotrader");
+    entry.repository = QStringLiteral("example-org/example-app");
     entry.ref = QStringLiteral("refs/tags/v1");
     entry.commit = QStringLiteral("abc");
     entry.file = QStringLiteral("a \"quoted\" name.msi");

@@ -417,7 +417,7 @@ Item {
 
                             Label {
                                 Layout.fillWidth: true
-                                text: "A GitHub Actions run proves itself with its OIDC token, bound to the request it sends; the desk checks the token against GitHub's keys and these three rules. A request without a token is listed as unverified: you can still approve it by hand, it is never signed automatically."
+                                text: "A GitHub Actions run proves itself with its OIDC token, bound to the request it sends; the desk checks the token against GitHub's keys and these three rules. A request without a token is listed as unverified: you can still approve it by hand, it is never signed automatically. A rule left empty is no rule: its check is unverified too, so set the owner and the repositories before turning on automatic signing."
                                 wrapMode: Text.WordWrap
                                 color: Theme.muted
                             }

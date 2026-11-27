@@ -45,9 +45,9 @@ public:
 //   - no token: the caller is unverified; a person may still approve, never automatic;
 //   - a token: RS256 against GitHub's JWKS, issuer token.actions.githubusercontent.com, not
 //     expired, audience "signature-master:<sha256 of the request body>", so a token cannot be
-//     reused for other files; repository_owner must be the allowed owner, and the repository,
-//     ref, sha and run_id claims must say what the manifest says. Anything wrong with a token
-//     that is present fails the check and refuses the request.
+//     reused for other files; repository_owner must be the allowed owner when one is set, and the
+//     repository, ref, sha and run_id claims must say what the manifest says. Anything wrong with a
+//     token that is present fails the check and refuses the request.
 class GitHubOidcAuthenticator : public Authenticator {
 public:
     GitHubOidcAuthenticator(Settings* settings, KeySource* keys);

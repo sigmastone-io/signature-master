@@ -22,7 +22,7 @@
     and checked.
 
         .\Request-Signature.ps1 -Desk http://192.0.2.10:7443 `
-            -Files target\msi\neurotrader-0.1.0-x64.msi `
+            -Files build\msi\example-app-0.1.0-x64.msi `
             -Thumbprint <sha1-thumbprint>
 
 .PARAMETER Desk

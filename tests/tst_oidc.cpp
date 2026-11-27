@@ -129,13 +129,15 @@ private:
 void OidcTest::initTestCase() {
     QVERIFY(m_dir.isValid());
     m_settings = std::make_unique<Settings>(m_dir.filePath(QStringLiteral("settings.ini")));
+    m_settings->setAllowedOwner(QStringLiteral("example-org"));
+    m_settings->setAllowedRepositories({QStringLiteral("example-app")});
     m_keys = std::make_unique<TestKeys>();
     m_auth = std::make_unique<GitHubOidcAuthenticator>(m_settings.get(), m_keys.get());
 }
 
 QJsonObject OidcTest::manifest() const {
     return {
-        {QStringLiteral("repository"), QStringLiteral("sigmastone-io/neurotrader")},
+        {QStringLiteral("repository"), QStringLiteral("example-org/example-app")},
         {QStringLiteral("ref"), QStringLiteral("refs/tags/v0.1.0")},
         {QStringLiteral("commit"), QStringLiteral("3b9d1e4f2c07")},
         {QStringLiteral("run_id"), 1287},
@@ -157,14 +159,14 @@ QJsonObject OidcTest::payload(const QByteArray& body) const {
         {QStringLiteral("iat"), static_cast<double>(now - 10)},
         {QStringLiteral("nbf"), static_cast<double>(now - 10)},
         {QStringLiteral("exp"), static_cast<double>(now + 300)},
-        {QStringLiteral("repository_owner"), QStringLiteral("sigmastone-io")},
-        {QStringLiteral("repository"), QStringLiteral("sigmastone-io/neurotrader")},
+        {QStringLiteral("repository_owner"), QStringLiteral("example-org")},
+        {QStringLiteral("repository"), QStringLiteral("example-org/example-app")},
         {QStringLiteral("ref"), QStringLiteral("refs/tags/v0.1.0")},
         {QStringLiteral("sha"), QStringLiteral("3b9d1e4f2c07")},
         {QStringLiteral("run_id"), QStringLiteral("1287")},
         {QStringLiteral("actor"), QStringLiteral("octocat")},
         {QStringLiteral("workflow_ref"),
-         QStringLiteral("sigmastone-io/neurotrader/.github/workflows/rust.yml@refs/tags/v0.1.0")},
+         QStringLiteral("example-org/example-app/.github/workflows/rust.yml@refs/tags/v0.1.0")},
         {QStringLiteral("event_name"), QStringLiteral("push")},
     };
 }
@@ -186,7 +188,7 @@ void OidcTest::goodTokenPasses() {
     const AuthResult result = run(m_keys->sign(header(), payload(body)), body);
     QVERIFY2(result.outcome == CheckOutcome::Passed, qPrintable(result.detail));
     QCOMPARE(result.identity,
-             QStringLiteral("GitHub Actions, sigmastone-io/neurotrader run 1287 by octocat"));
+             QStringLiteral("GitHub Actions, example-org/example-app run 1287 by octocat"));
     QVERIFY(result.detail.contains(QStringLiteral("rust.yml")));
 }
 
