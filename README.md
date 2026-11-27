@@ -3,8 +3,9 @@
 [![Build](https://github.com/sigmastone-io/signature-master/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/sigmastone-io/signature-master/actions/workflows/build.yml)
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 
-A signing desk for code signing certificates that live on hardware. Signature Master runs on the
-Windows machine that holds the certificate, listens for release jobs over a small REST API, and
+A signing desk for code signing certificates that cannot be copied into CI. Signature Master runs
+on the Windows machine where the certificate is usable, listens for release jobs over a small
+REST API, and
 signs the files they send with `signtool`, once a person at the desk has said yes, or on its own
 for requests that prove where they come from.
 
@@ -15,19 +16,23 @@ for requests that prove where they come from.
 
 ## Why
 
-A code signing key on a smart card or USB token cannot be copied into a CI secret, and it should
-not be: the point of the hardware is that the key never leaves it. That leaves a release pipeline
-with a gap at the one step that needs the key. Signature Master closes it without moving the key:
+A code signing key today lives on a smart card, a USB token or a CA's cloud signing service
+(Certum SimplySign, for one), and none of them can be copied into a CI secret. Nor should they
+be: a credential in CI is the ability to sign in anybody's hands who can read it. That leaves a
+release pipeline with a gap at the one step that needs the key. Signature Master closes it
+without moving the key:
 
-- the card stays plugged into one desktop, in the session of the person who owns it, where its
-  PIN dialog can appear;
+- the key stays usable on one desktop only, in the session of the person who owns it: the card
+  plugged in there, or the cloud signing client logged in there, where its own dialogs can
+  appear;
 - a release job uploads its unsigned files to the desk, waits, and downloads the signed copies;
 - the job proves which repository, ref, commit and run it is with its GitHub Actions OIDC token,
   bound to the exact request it sends, so a request cannot be forged or replayed;
 - a person approves each request on screen, or, when they choose to, the desk signs requests
   whose every check passed without asking.
 
-No cloud signing service is involved and nothing about the key is ever sent anywhere.
+The desk never holds the key or the credential that unlocks it. It hands `signtool` a
+thumbprint, and the card's middleware or the cloud signing client does the rest.
 
 ## Features
 
@@ -45,7 +50,8 @@ No cloud signing service is involved and nothing about the key is ever sent anyw
 - **Automatic signing**, off by default, for verified requests whose every check passed.
 - **An append-only signature log**, one line per file and outcome, with a viewer and CSV export.
 - **A tray icon** with notifications for new requests, so the desk can live out of sight.
-- **A test certificate** made in one click, for trying the whole path before the card arrives.
+- **A test certificate** made in one click, for trying the whole path before the real
+  certificate is issued.
 - Light and dark themes following Windows.
 
 More pictures: [doc/screenshots.md](doc/screenshots.md).
@@ -57,8 +63,12 @@ More pictures: [doc/screenshots.md](doc/screenshots.md).
   finds it under `C:\Program Files (x86)\Windows Kits\10\bin`; another location can be set in
   Settings.
 - A code signing certificate in the current user's personal store (`Cert:\CurrentUser\My`). A
-  smart card or token shows up there once its vendor's middleware is installed; the card's own PIN
-  dialog asks for the PIN when a file is signed.
+  smart card or token shows up there once its vendor's middleware is installed, and the card's own
+  PIN dialog asks for the PIN when a file is signed. A cloud certificate shows up there through
+  its vendor's client: Certum's SimplySign Desktop presents it as a virtual smart card while a
+  session is open (see [Using Certum SimplySign](#using-certum-simplysign)).
+- The issuing CA's intermediate certificate in `Cert:\CurrentUser\CA`, so that `signtool` puts it
+  in every signature and a machine that lacks it can still build the chain.
 - A network path from the release job's runner to the desk (TCP 7443 by default). The API is plain
   HTTP and meant for a LAN; see [Security model](#security-model).
 
@@ -139,8 +149,10 @@ The routes, the manifest, the request and its states are in
 
 ## Security model
 
-- **The key stays on its hardware.** The desk calls `signtool` with the certificate's thumbprint;
-  the private key is used by the card's middleware and never read, exported or sent.
+- **The desk never touches the key.** It calls `signtool` with the certificate's thumbprint; the
+  private key is used by the card's middleware or the cloud signing client and is never read,
+  exported or sent by the desk. With a cloud certificate the files' digests go to the vendor's
+  service to be signed; that is the vendor's design, not the desk's.
 - **Every request says who sent it, and the token proves it.** A GitHub Actions ID token is
   verified against GitHub's published keys: issuer, expiry, the audience equal to the SHA-256 of
   the body received, `repository_owner` equal to the allowed owner, and `repository`, `ref`, `sha`
@@ -156,9 +168,40 @@ The routes, the manifest, the request and its states are in
 - **Plain HTTP, on purpose limited to the LAN.** The token binding means a request cannot be
   altered in flight without being refused, but the files travel unencrypted; keep the desk off
   the Internet.
-- **The PIN.** The card's own dialog asks for it and the desk never sees it. Keeping the PIN in
-  Windows Credential Manager, so automatic signing can run unattended with a card, is planned and
-  not built; its setting is disabled.
+- **The PIN or login.** A card's own dialog asks for its PIN, and a cloud client asks for its own
+  login; the desk sees neither. Keeping a card's PIN in Windows Credential Manager, so automatic
+  signing can run unattended with a card, is planned and not built; its setting is disabled. It
+  has nothing to keep with SimplySign, whose login is a one-time token.
+
+## Using Certum SimplySign
+
+Sigmastone signs with a Certum code signing certificate held in Certum's cloud. The setup on the
+desk's machine, once:
+
+1. Activate the SimplySign mobile app with the code from Certum. It generates the one-time tokens
+   SimplySign Desktop logs in with.
+2. Install SimplySign Desktop from Certum and log in from its tray icon with the account's e-mail
+   address and a token from the app. The certificate appears in `Cert:\CurrentUser\My`:
+
+   ```powershell
+   Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Format-List Subject, Issuer, Thumbprint, HasPrivateKey
+   ```
+
+3. Import the intermediate certificate Certum supplies with it (`Certum Code Signing 2021 CA`) into
+   `Cert:\CurrentUser\CA`. The roots above it are already trusted by Windows; do not import them.
+
+   ```powershell
+   Import-Certificate -FilePath '.\Certum Code Signing 2021 CA.cer' -CertStoreLocation Cert:\CurrentUser\CA
+   ```
+
+4. In the desk's Settings, pick the certificate. The timestamp server default,
+   `http://time.certum.pl`, is Certum's.
+5. Give the release jobs the new thumbprint (`SIGNING_THUMBPRINT`) and drop
+   `-AllowUntrustedSigner`, which exists only for the test certificate.
+
+The desk can sign only while SimplySign Desktop has a session open. A session ends on its own
+after a while without use; a request that arrives afterwards fails at `signtool` until the session
+is opened again with a fresh token, and can then be signed again from a new request.
 
 ## Building from source
 
