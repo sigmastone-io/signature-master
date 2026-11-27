@@ -175,12 +175,19 @@ $id = $created.Body.id
 Write-Host "Request $id opened for $($resolved.Count) file(s)"
 
 # 3. The files.
-foreach ($entry in $resolved) {
-    Write-Host "Uploading $($entry.Name) ($([math]::Round($entry.Size / 1MB, 1)) MB)"
-    $put = Invoke-Desk -Method Put -Path "/requests/$id/files/$([uri]::EscapeDataString($entry.Name))" -InFile $entry.Path
-    if ($put.Status -ne 200) {
-        throw "The desk did not take $($entry.Name) (HTTP $($put.Status)): $(Get-Reason $put)"
+# A request whose upload failed is cancelled, so it does not wait at the desk for files that are
+# not coming.
+try {
+    foreach ($entry in $resolved) {
+        Write-Host "Uploading $($entry.Name) ($([math]::Round($entry.Size / 1MB, 1)) MB)"
+        $put = Invoke-Desk -Method Put -Path "/requests/$id/files/$([uri]::EscapeDataString($entry.Name))" -InFile $entry.Path
+        if ($put.Status -ne 200) {
+            throw "The desk did not take $($entry.Name) (HTTP $($put.Status)): $(Get-Reason $put)"
+        }
     }
+} catch {
+    try { Invoke-Desk -Method Delete -Path "/requests/$id" | Out-Null } catch { }
+    throw "Uploading to request $id failed, and the request was cancelled: $($_.Exception.Message)"
 }
 
 # 4. Wait for the person at the desk.

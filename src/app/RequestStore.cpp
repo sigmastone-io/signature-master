@@ -114,6 +114,13 @@ RequestStore::Reply RequestStore::create(const QJsonObject& manifest, const Auth
         if (file.size <= 0) {
             return error(400, QStringLiteral("file \"%1\" needs a positive size").arg(file.name));
         }
+        if (file.size > kMaximumFileSize) {
+            return error(400,
+                         QStringLiteral("file \"%1\" is %2 MiB; the desk takes files up to %3 MiB")
+                             .arg(file.name)
+                             .arg(file.size / (1024 * 1024))
+                             .arg(kMaximumFileSize / (1024 * 1024)));
+        }
         if (!isSha256(file.sha256)) {
             return error(400, QStringLiteral("file \"%1\" needs a SHA-256 in hex").arg(file.name));
         }

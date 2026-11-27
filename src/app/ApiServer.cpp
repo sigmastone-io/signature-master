@@ -8,6 +8,7 @@
 
 #include <QCoreApplication>
 #include <QHttpServer>
+#include <QHttpServerConfiguration>
 #include <QHttpServerRequest>
 #include <QHttpServerResponse>
 #include <QJsonDocument>
@@ -35,6 +36,12 @@ ApiServer::~ApiServer() = default;
 bool ApiServer::start(const QHostAddress& address, quint16 port, QString* error) {
     stop();
     m_http = std::make_unique<QHttpServer>();
+    // Qt's default body limit is 32 MiB, which a release binary outgrows; the connection is then
+    // dropped mid-upload with no answer. The store's own limit is the one that counts, and a
+    // manifest promising more is refused when the request is opened.
+    QHttpServerConfiguration configuration = m_http->configuration();
+    configuration.setMaximumBodySize(RequestStore::kMaximumFileSize);
+    m_http->setConfiguration(configuration);
     addRoutes();
 
     // The TCP server is a child of the HTTP server, so both go together on stop().

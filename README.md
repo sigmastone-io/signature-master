@@ -195,7 +195,8 @@ or firewall changes. With Cloudflare Tunnel, for example:
 4. Give the release jobs that address as `SIGNING_DESK`.
 
 With the tunnel on the same machine the desk can listen on `127.0.0.1` alone. Cloudflare's free
-plan caps a request body at 100 MB, which is the largest file the desk can take through it.
+plan caps a request body at 100 MB, which is the largest file the desk can take through it;
+the desk itself takes files up to 512 MiB.
 
 ## Using Certum SimplySign
 

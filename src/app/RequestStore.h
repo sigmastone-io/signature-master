@@ -69,6 +69,9 @@ public:
 
     static constexpr int kApprovalTimeoutMinutes = 60;
     static constexpr int kRetentionHours = 24;
+    // The largest file a request may carry. The HTTP server holds an upload in memory while it
+    // arrives, so this is a bound on that as well as on what a manifest may promise.
+    static constexpr qint64 kMaximumFileSize = 512LL * 1024 * 1024;
 
 Q_SIGNALS:
     void added(const QString& id);

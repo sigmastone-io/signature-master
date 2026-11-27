@@ -63,6 +63,8 @@ private Q_SLOTS:
     void malformedManifestIsNotListed();
     void unknownOwnerIsRefusedAndListed();
     void goodRequestBecomesPendingAfterUpload();
+    void uploadLargerThanQtsDefaultIsTaken();
+    void manifestOverTheLimitIsRefused();
     void wrongHashRefusesTheRequest();
     void unknownFileNameIsRejected();
     void cancelExpiresThePendingRequest();
@@ -229,6 +231,32 @@ void ApiTest::goodRequestBecomesPendingAfterUpload() {
     const HttpReply again = call(
         "PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), m_payload);
     QCOMPARE(again.status, 409);
+}
+
+void ApiTest::uploadLargerThanQtsDefaultIsTaken() {
+    // Qt HTTP Server drops a body over 32 MiB unless told otherwise; a release binary is larger.
+    const QByteArray large(40 * 1024 * 1024, 'x');
+    const QString id = createGoodRequest(large);
+    QVERIFY(!id.isEmpty());
+    const HttpReply put =
+        call("PUT", QStringLiteral("/requests/%1/files/example-app-0.1.0-x64.msi").arg(id), large);
+    QCOMPARE(put.status, 200);
+    QCOMPARE(put.body.value(QStringLiteral("state")).toString(), QStringLiteral("pending"));
+}
+
+void ApiTest::manifestOverTheLimitIsRefused() {
+    QJsonObject manifest = manifestFor(
+        QStringLiteral("example-org/example-app"), QStringLiteral("refs/tags/v0.1.0"), m_payload);
+    QJsonArray files = manifest.value(QStringLiteral("files")).toArray();
+    QJsonObject file = files.first().toObject();
+    file.insert(QStringLiteral("size"), static_cast<double>(RequestStore::kMaximumFileSize + 1));
+    files.replace(0, file);
+    manifest.insert(QStringLiteral("files"), files);
+    const HttpReply reply =
+        call("POST", QStringLiteral("/requests"), QJsonDocument(manifest).toJson());
+    QCOMPARE(reply.status, 400);
+    QVERIFY(reply.body.value(QStringLiteral("error")).toString().contains(QStringLiteral("MiB")));
+    QCOMPARE(m_store->requests().size(), 0);
 }
 
 void ApiTest::wrongHashRefusesTheRequest() {
